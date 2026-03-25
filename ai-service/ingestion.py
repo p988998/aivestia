@@ -5,15 +5,12 @@ from typing import Any, Dict, List
 
 import certifi
 from dotenv import load_dotenv
-# from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_tavily import TavilyCrawl, TavilyExtract, TavilyMap
-
-from logger import (Colors, log_error, log_header, log_info, log_success,
-                    log_warning)
+from utils.logger import (Colors, log_error, log_header, log_info, log_success, log_warning)
 
 load_dotenv()
 

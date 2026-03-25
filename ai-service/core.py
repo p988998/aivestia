@@ -9,6 +9,8 @@ from langchain.tools import tool
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 
+from tools.market_tools import get_market_news, get_market_price
+
 load_dotenv()
 
 # Initialize embeddings (same as ingestion.py)
@@ -54,12 +56,14 @@ def run_llm(query: str) -> Dict[str, Any]:
     system_prompt = (
         "You are a helpful AI assistant that answers questions about investing. "
         "You have access to a tool that retrieves relevant documentation. "
-        "Use the tool to find relevant information before answering questions. "
+        "You also have access to a tool that fetches real-time market prices for stocks, ETFs, and bonds by ticker symbol. "
+        "You also have access to a tool that fetches real-time market news. "
+        "Use the tools to find relevant information before answering questions. "
         "Always cite the sources you use in your answers. "
         "If you cannot find the answer in the retrieved documentation, say so."
     )
-    
-    agent = create_agent(model, tools=[retrieve_context], system_prompt=system_prompt)
+
+    agent = create_agent(model, tools=[retrieve_context, get_market_price, get_market_news], system_prompt=system_prompt)
     
     # Build messages list
     messages = [{"role": "user", "content": query}]
@@ -70,18 +74,23 @@ def run_llm(query: str) -> Dict[str, Any]:
     # Extract the answer from the last AI message
     answer = response["messages"][-1].content
     
-    # Extract context documents from ToolMessage artifacts
+    # Extract context documents and news URLs from ToolMessage artifacts
     context_docs = []
+    news_urls = []
     for message in response["messages"]:
-        # Check if this is a ToolMessage with artifact
         if isinstance(message, ToolMessage) and hasattr(message, "artifact"):
-            # The artifact should contain the list of Document objects
-            if isinstance(message.artifact, list):
-                context_docs.extend(message.artifact)
+            if not isinstance(message.artifact, list):
+                continue
+            for item in message.artifact:
+                if isinstance(item, str):
+                    news_urls.append(item)
+                else:
+                    context_docs.append(item)
     
     return {
         "answer": answer,
-        "context": context_docs
+        "context": context_docs,
+        "news_urls": news_urls,
     }
 
 if __name__ == '__main__':
