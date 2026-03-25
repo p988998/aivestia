@@ -10,6 +10,16 @@ function renderMarkdown(text) {
     .replace(/\n/g, '<br />')
 }
 
+async function fetchPortfolio(age, riskLevel, horizon) {
+  const res = await fetch('http://localhost:8000/portfolio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ age: Number(age), riskLevel, horizon: Number(horizon) }),
+  })
+  if (!res.ok) throw new Error('Portfolio service error')
+  return res.json()
+}
+
 async function fetchAIResponse(message) {
   const res = await fetch('http://localhost:8000/chat', {
     method: 'POST',
@@ -220,11 +230,13 @@ function StackItem({ lang, detail, color }) {
 }
 
 function ChatPage({ onBack }) {
+  const [mode, setMode] = useState('chat')
   const [messages, setMessages] = useState([
     { role: 'assistant', content: "Hi! I'm your Aivestia advisor. Ask me anything about investing, ETFs, risk levels, or portfolio strategies.", sources: [] }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [portfolioContext, setPortfolioContext] = useState(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -237,8 +249,11 @@ function ChatPage({ onBack }) {
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: text, sources: [] }])
     setLoading(true)
+    const messageToSend = portfolioContext
+      ? `[User profile: Age ${portfolioContext.age}, Risk level ${portfolioContext.riskLevel}, Investment horizon ${portfolioContext.horizon} years]\n\n${text}`
+      : text
     try {
-      const { answer, sources } = await fetchAIResponse(text)
+      const { answer, sources } = await fetchAIResponse(messageToSend)
       setMessages(prev => [...prev, { role: 'assistant', content: answer, sources }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, the AI service is unavailable. Please make sure it is running on port 8000.', sources: [] }])
@@ -247,56 +262,177 @@ function ChatPage({ onBack }) {
     }
   }
 
+  function handleSaveForChat({ age, riskLevel, horizon }) {
+    const label = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)
+    setPortfolioContext({ age, riskLevel, horizon })
+    setMessages(prev => [...prev, {
+      role: 'system',
+      content: `Age: ${age} · Risk: ${label} · Horizon: ${horizon} yr`,
+      sources: [],
+    }])
+    setMode('chat')
+  }
+
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+  }
+
+  async function handlePortfolioSubmit({ age, riskLevel, horizon }) {
+    const label = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)
+    setMessages(prev => [...prev, {
+      role: 'user', content: `Build my portfolio — Age: ${age}, Risk: ${label}, Horizon: ${horizon} years`, sources: [],
+    }])
+    setMode('chat')
+    setLoading(true)
+    try {
+      const data = await fetchPortfolio(age, riskLevel, horizon)
+      setMessages(prev => [...prev, {
+        role: 'assistant', type: 'portfolio', portfolio: data, sources: [],
+      }])
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'assistant', content: 'Sorry, could not generate the portfolio. Please make sure the AI service is running.', sources: [],
+      }])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="chat-page">
       <div className="chat-header">
         <button className="chat-back" onClick={onBack}>← Back</button>
-        <div className="chat-title">
-          <span className="logo-icon">◈</span>
-          <span>Aivestia Advisor</span>
+        <div className="chat-tabs">
+          <button className={`tab ${mode === 'chat' ? 'tab-active' : ''}`} onClick={() => setMode('chat')}>Chat</button>
+          <button className={`tab ${mode === 'portfolio' ? 'tab-active' : ''}`} onClick={() => setMode('portfolio')}>Build Portfolio</button>
         </div>
         <div className="chat-status"><span className="status-dot" />AI ready</div>
       </div>
 
-      <div className="chat-messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={`bubble-wrap ${msg.role}`}>
-            {msg.role === 'assistant' && <div className="avatar">◈</div>}
-            <div className="bubble-content">
-              <div className={`bubble ${msg.role}`} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
-              {msg.sources?.length > 0 && (
-                <SourcesPanel sources={msg.sources} />
-              )}
-            </div>
+      {mode === 'chat' && (
+        <>
+          <div className="chat-messages">
+            {messages.map((msg, i) => (
+              msg.role === 'system'
+                ? <div key={i} className="system-notice">{msg.content}</div>
+                : (
+                  <div key={i} className={`bubble-wrap ${msg.role}`}>
+                    {msg.role === 'assistant' && <div className="avatar">◈</div>}
+                    <div className="bubble-content">
+                      {msg.type === 'portfolio'
+                        ? <PortfolioResult {...msg.portfolio} />
+                        : <div className={`bubble ${msg.role}`} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
+                      }
+                      {msg.sources?.length > 0 && (
+                        <SourcesPanel sources={msg.sources} />
+                      )}
+                    </div>
+                  </div>
+                )
+            ))}
+            {loading && (
+              <div className="bubble-wrap assistant">
+                <div className="avatar">◈</div>
+                <div className="bubble assistant typing">
+                  <span /><span /><span />
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
           </div>
-        ))}
-        {loading && (
-          <div className="bubble-wrap assistant">
-            <div className="avatar">◈</div>
-            <div className="bubble assistant typing">
-              <span /><span /><span />
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
 
-      <div className="chat-input-bar">
-        <textarea
-          className="chat-input"
-          placeholder="Ask about ETFs, risk, rebalancing..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-        />
-        <button className="chat-send" onClick={handleSend} disabled={!input.trim() || loading}>
-          Send →
-        </button>
+          <div className="chat-input-bar">
+            <textarea
+              className="chat-input"
+              placeholder="Ask about ETFs, risk, rebalancing..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+            />
+            <button className="chat-send" onClick={handleSend} disabled={!input.trim() || loading}>
+              Send →
+            </button>
+          </div>
+        </>
+      )}
+
+      {mode === 'portfolio' && <PortfolioForm onSubmit={handlePortfolioSubmit} onSaveForChat={handleSaveForChat} />}
+    </div>
+  )
+}
+
+function PortfolioForm({ onSubmit, onSaveForChat }) {
+  const [form, setForm] = useState({ age: '', riskLevel: 'medium', horizon: '' })
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    onSubmit({ ...form })
+    setForm({ age: '', riskLevel: 'medium', horizon: '' })
+  }
+
+  function handleSave() {
+    onSaveForChat({ ...form })
+    setForm({ age: '', riskLevel: 'medium', horizon: '' })
+  }
+
+  const canSave = form.age && form.horizon
+
+  return (
+    <div className="portfolio-form-wrap">
+      <form className="portfolio-form" onSubmit={handleSubmit}>
+        <h2 className="form-title">Build Your Portfolio</h2>
+        <label className="form-label">
+          Age
+          <input type="number" min="18" max="100" value={form.age}
+            onChange={e => setForm(f => ({ ...f, age: e.target.value }))} required />
+        </label>
+        <label className="form-label">
+          Risk Level
+          <select value={form.riskLevel} onChange={e => setForm(f => ({ ...f, riskLevel: e.target.value }))}>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+        <label className="form-label">
+          Investment Horizon (years)
+          <input type="number" min="1" max="50" value={form.horizon}
+            onChange={e => setForm(f => ({ ...f, horizon: e.target.value }))} required />
+        </label>
+        <div className="form-actions">
+          <button type="button" className="btn-save-context" onClick={handleSave} disabled={!canSave}>
+            Save for Chat
+          </button>
+          <button type="submit" className="btn-primary">Generate Portfolio →</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function PortfolioResult({ allocations, age, riskLevel, horizon }) {
+  const riskColor = { low: '#22c55e', medium: '#fbbf24', high: '#f87171' }[riskLevel]
+  const label = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)
+  return (
+    <div className="portfolio-result">
+      <div className="card-label">Your Portfolio · {label} Risk</div>
+      <div className="allocation-list">
+        {allocations.map(a => <AllocationRow key={a.ticker} {...a} />)}
+      </div>
+      <div className="card-footer">
+        <div className="card-stat">
+          <span className="stat-label">Age</span>
+          <span className="stat-value">{age}</span>
+        </div>
+        <div className="card-stat">
+          <span className="stat-label">Horizon</span>
+          <span className="stat-value">{horizon} yr</span>
+        </div>
+        <div className="card-stat">
+          <span className="stat-label">Risk</span>
+          <span className="stat-value" style={{ color: riskColor }}>{label}</span>
+        </div>
       </div>
     </div>
   )

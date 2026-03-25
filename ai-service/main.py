@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core import run_llm
+from services.portfolio_service import Allocation, get_allocations
+from utils.logger import log_info, log_success
 
 app = FastAPI()
 
@@ -25,6 +27,19 @@ class ChatResponse(BaseModel):
     sources: list[str]
 
 
+class PortfolioRequest(BaseModel):
+    age: int
+    riskLevel: str
+    horizon: int
+
+
+class PortfolioResponse(BaseModel):
+    allocations: list[Allocation]
+    age: int
+    riskLevel: str
+    horizon: int
+
+
 def _strip_source_suffix(text: str) -> str:
     """Remove 'Source: ...' lines appended by the LLM (inline or trailing)."""
     return re.sub(r"\n?Source:[^\n]*", "", text, flags=re.IGNORECASE).strip()
@@ -32,6 +47,7 @@ def _strip_source_suffix(text: str) -> str:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
+    log_info(f"[/chat] message: {req.message}")
     result = run_llm(query=req.message)
     raw_sources = [
         str(doc.metadata.get("source") or "Unknown")
@@ -40,4 +56,19 @@ def chat(req: ChatRequest):
     ] + (result.get("news_urls") or [])
     sources = list(dict.fromkeys(raw_sources))  # deduplicate, preserve order
     answer = _strip_source_suffix(result["answer"])
+    log_success(f"[/chat] answer: {answer[:120]}{'...' if len(answer) > 120 else ''} | sources: {len(sources)}")
     return ChatResponse(answer=answer, sources=sources)
+
+
+@app.post("/portfolio", response_model=PortfolioResponse)
+def portfolio(req: PortfolioRequest):
+    log_info(f"[/portfolio] age={req.age}, riskLevel={req.riskLevel}, horizon={req.horizon}")
+    allocations = get_allocations(req.riskLevel)
+    response = PortfolioResponse(
+        allocations=allocations,
+        age=req.age,
+        riskLevel=req.riskLevel,
+        horizon=req.horizon,
+    )
+    log_success(f"[/portfolio] allocations: {[f'{a.ticker} {a.weight}%' for a in allocations]}")
+    return response
