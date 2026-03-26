@@ -848,6 +848,30 @@
   margin-top: 4px;
 }
 
+.btn-clear {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #94a3b8;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  font-family: inherit;
+}
+
+.btn-clear:hover:not(:disabled) {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.3);
+  color: #cbd5e1;
+}
+
+.btn-clear:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .btn-save-context {
   flex: 1;
   background: rgba(99,102,241,0.15);
@@ -870,6 +894,55 @@
 .btn-save-context:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+/* ── Interest Pills ── */
+.interest-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.interest-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.interest-optional {
+  font-weight: 400;
+  color: #475569;
+}
+
+.interest-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.interest-pill {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+
+.interest-pill:hover {
+  background: rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.4);
+  color: #c7d2fe;
+}
+
+.interest-pill-active {
+  background: rgba(99,102,241,0.2);
+  border-color: #6366f1;
+  color: #a5b4fc;
 }
 
 /* ── Portfolio Result ── */

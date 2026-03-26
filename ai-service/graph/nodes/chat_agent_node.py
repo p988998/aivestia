@@ -2,9 +2,24 @@ from agents.chat_agent import run as chat_agent_run
 from graph.state import GraphState
 
 
+def _build_profile_message(user_profile: dict) -> dict | None:
+    if not user_profile:
+        return None
+    interests = user_profile.get("interests") or []
+    interests_text = f", interests: {', '.join(interests)}" if interests else ""
+    profile_text = (
+        f"User profile: age={user_profile.get('age')}, "
+        f"risk tolerance={user_profile.get('riskLevel')}, "
+        f"investment horizon={user_profile.get('horizon')} years"
+        f"{interests_text}."
+    )
+    return {"role": "system", "content": profile_text}
+
+
 def chat_agent_node(state: GraphState) -> GraphState:
     history = state.get("history", [])
-    messages = history + [{"role": "user", "content": state["question"]}]
+    profile_msg = _build_profile_message(state.get("user_profile", {}))
+    messages = ([profile_msg] if profile_msg else []) + history + [{"role": "user", "content": state["question"]}]
     result = chat_agent_run(messages)
     return {
         "answer":    result["answer"],

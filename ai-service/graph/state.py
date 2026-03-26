@@ -3,9 +3,10 @@ from typing import Annotated, TypedDict
 
 
 class GraphState(TypedDict):
-    question:   str
-    datasource: str
-    answer:     str
-    context:    list
-    news_urls:  list
-    history:    Annotated[list, operator.add]
+    question:     str
+    datasource:   str
+    answer:       str
+    context:      list
+    news_urls:    list
+    history:      Annotated[list, operator.add]
+    user_profile: dict

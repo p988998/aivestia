@@ -7,7 +7,7 @@ from langchain.messages import ToolMessage
 from tools.market_tools import get_market_news, get_market_price, get_stock_price_history
 from tools.retrieval_tools import retrieve_context
 
-_model = init_chat_model("gpt-5.2", model_provider="openai")
+_model = init_chat_model("gpt-5.4", model_provider="openai")
 
 _SYSTEM_PROMPT = (
     "You are a helpful AI assistant that answers questions about investing. "

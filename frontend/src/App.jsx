@@ -10,21 +10,12 @@ function renderMarkdown(text) {
     .replace(/\n/g, '<br />')
 }
 
-async function fetchPortfolio(age, riskLevel, horizon) {
-  const res = await fetch('http://localhost:8000/portfolio', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ age: Number(age), riskLevel, horizon: Number(horizon) }),
-  })
-  if (!res.ok) throw new Error('Portfolio service error')
-  return res.json()
-}
 
-async function fetchAIResponse(message, sessionId) {
+async function fetchAIResponse(message, sessionId, userProfile = null) {
   const res = await fetch('http://localhost:8000/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({ message, session_id: sessionId, user_profile: userProfile ?? {} }),
   })
   if (!res.ok) throw new Error('AI service error')
   const data = await res.json()
@@ -250,11 +241,8 @@ function ChatPage({ onBack }) {
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: text, sources: [] }])
     setLoading(true)
-    const messageToSend = portfolioContext
-      ? `[User profile: Age ${portfolioContext.age}, Risk level ${portfolioContext.riskLevel}, Investment horizon ${portfolioContext.horizon} years]\n\n${text}`
-      : text
     try {
-      const { answer, sources } = await fetchAIResponse(messageToSend, sessionId)
+      const { answer, sources } = await fetchAIResponse(text, sessionId, portfolioContext)
       setMessages(prev => [...prev, { role: 'assistant', content: answer, sources }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, the AI service is unavailable. Please make sure it is running on port 8000.', sources: [] }])
@@ -263,12 +251,13 @@ function ChatPage({ onBack }) {
     }
   }
 
-  function handleSaveForChat({ age, riskLevel, horizon }) {
+  function handleSaveForChat({ age, riskLevel, horizon, interests }) {
     const label = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)
-    setPortfolioContext({ age, riskLevel, horizon })
+    setPortfolioContext({ age, riskLevel, horizon, interests })
+    const interestText = interests?.length ? ` · ${interests.join(', ')}` : ''
     setMessages(prev => [...prev, {
       role: 'system',
-      content: `Age: ${age} · Risk: ${label} · Horizon: ${horizon} yr`,
+      content: `Age: ${age} · Risk: ${label} · Horizon: ${horizon} yr${interestText}`,
       sources: [],
     }])
     setMode('chat')
@@ -278,34 +267,13 @@ function ChatPage({ onBack }) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
-  async function handlePortfolioSubmit({ age, riskLevel, horizon }) {
-    const label = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)
-    setMessages(prev => [...prev, {
-      role: 'user', content: `Build my portfolio — Age: ${age}, Risk: ${label}, Horizon: ${horizon} years`, sources: [],
-    }])
-    setMode('chat')
-    setLoading(true)
-    try {
-      const data = await fetchPortfolio(age, riskLevel, horizon)
-      setMessages(prev => [...prev, {
-        role: 'assistant', type: 'portfolio', portfolio: data, sources: [],
-      }])
-    } catch {
-      setMessages(prev => [...prev, {
-        role: 'assistant', content: 'Sorry, could not generate the portfolio. Please make sure the AI service is running.', sources: [],
-      }])
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="chat-page">
       <div className="chat-header">
         <button className="chat-back" onClick={onBack}>← Back</button>
         <div className="chat-tabs">
           <button className={`tab ${mode === 'chat' ? 'tab-active' : ''}`} onClick={() => setMode('chat')}>Chat</button>
-          <button className={`tab ${mode === 'portfolio' ? 'tab-active' : ''}`} onClick={() => setMode('portfolio')}>Build Portfolio</button>
+          <button className={`tab ${mode === 'portfolio' ? 'tab-active' : ''}`} onClick={() => setMode('portfolio')}>My Profile</button>
         </div>
         <div className="chat-status"><span className="status-dot" />AI ready</div>
       </div>
@@ -358,35 +326,58 @@ function ChatPage({ onBack }) {
         </>
       )}
 
-      {mode === 'portfolio' && <PortfolioForm onSubmit={handlePortfolioSubmit} onSaveForChat={handleSaveForChat} />}
+      {mode === 'portfolio' && <PortfolioForm onSaveForChat={handleSaveForChat} savedProfile={portfolioContext} />}
     </div>
   )
 }
 
-function PortfolioForm({ onSubmit, onSaveForChat }) {
-  const [form, setForm] = useState({ age: '', riskLevel: 'medium', horizon: '' })
+const INTERESTS = [
+  'Tech & Growth',
+  'Dividend Income',
+  'ESG / Sustainable',
+  'International Markets',
+  'REITs / Real Estate',
+  'Bonds & Fixed Income',
+  'Value Investing',
+  'Small & Mid Cap',
+]
 
-  function handleSubmit(e) {
-    e.preventDefault()
-    onSubmit({ ...form })
-    setForm({ age: '', riskLevel: 'medium', horizon: '' })
+function PortfolioForm({ onSaveForChat, savedProfile }) {
+  const [form, setForm] = useState({
+    age: savedProfile?.age ?? '',
+    riskLevel: savedProfile?.riskLevel ?? 'medium',
+    horizon: savedProfile?.horizon ?? '',
+    interests: savedProfile?.interests ?? [],
+  })
+
+  function toggleInterest(interest) {
+    setForm(f => ({
+      ...f,
+      interests: f.interests.includes(interest)
+        ? f.interests.filter(i => i !== interest)
+        : [...f.interests, interest],
+    }))
   }
 
   function handleSave() {
     onSaveForChat({ ...form })
-    setForm({ age: '', riskLevel: 'medium', horizon: '' })
+  }
+
+  function handleClear() {
+    setForm({ age: '', riskLevel: 'medium', horizon: '', interests: [] })
   }
 
   const canSave = form.age && form.horizon
+  const hasContent = form.age || form.horizon || form.interests.length > 0
 
   return (
     <div className="portfolio-form-wrap">
-      <form className="portfolio-form" onSubmit={handleSubmit}>
-        <h2 className="form-title">Build Your Portfolio</h2>
+      <div className="portfolio-form">
+        <h2 className="form-title">My Investor Profile</h2>
         <label className="form-label">
           Age
           <input type="number" min="18" max="100" value={form.age}
-            onChange={e => setForm(f => ({ ...f, age: e.target.value }))} required />
+            onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
         </label>
         <label className="form-label">
           Risk Level
@@ -399,15 +390,32 @@ function PortfolioForm({ onSubmit, onSaveForChat }) {
         <label className="form-label">
           Investment Horizon (years)
           <input type="number" min="1" max="50" value={form.horizon}
-            onChange={e => setForm(f => ({ ...f, horizon: e.target.value }))} required />
+            onChange={e => setForm(f => ({ ...f, horizon: e.target.value }))} />
         </label>
+        <div className="interest-section">
+          <div className="interest-label">Interests <span className="interest-optional">(optional)</span></div>
+          <div className="interest-pills">
+            {INTERESTS.map(interest => (
+              <button
+                key={interest}
+                type="button"
+                className={`interest-pill ${form.interests.includes(interest) ? 'interest-pill-active' : ''}`}
+                onClick={() => toggleInterest(interest)}
+              >
+                {interest}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="form-actions">
+          <button type="button" className="btn-clear" onClick={handleClear} disabled={!hasContent}>
+            Clear All
+          </button>
           <button type="button" className="btn-save-context" onClick={handleSave} disabled={!canSave}>
             Save for Chat
           </button>
-          <button type="submit" className="btn-primary">Generate Portfolio →</button>
         </div>
-      </form>
+      </div>
     </div>
   )
 }
