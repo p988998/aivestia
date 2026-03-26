@@ -20,11 +20,11 @@ async function fetchPortfolio(age, riskLevel, horizon) {
   return res.json()
 }
 
-async function fetchAIResponse(message) {
+async function fetchAIResponse(message, sessionId) {
   const res = await fetch('http://localhost:8000/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, session_id: sessionId }),
   })
   if (!res.ok) throw new Error('AI service error')
   const data = await res.json()
@@ -237,6 +237,7 @@ function ChatPage({ onBack }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [portfolioContext, setPortfolioContext] = useState(null)
+  const [sessionId] = useState(() => crypto.randomUUID())
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -253,7 +254,7 @@ function ChatPage({ onBack }) {
       ? `[User profile: Age ${portfolioContext.age}, Risk level ${portfolioContext.riskLevel}, Investment horizon ${portfolioContext.horizon} years]\n\n${text}`
       : text
     try {
-      const { answer, sources } = await fetchAIResponse(messageToSend)
+      const { answer, sources } = await fetchAIResponse(messageToSend, sessionId)
       setMessages(prev => [...prev, { role: 'assistant', content: answer, sources }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, the AI service is unavailable. Please make sure it is running on port 8000.', sources: [] }])

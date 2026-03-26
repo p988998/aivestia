@@ -20,6 +20,7 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: str
 
 
 class ChatResponse(BaseModel):
@@ -47,8 +48,8 @@ def _strip_source_suffix(text: str) -> str:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    log_info(f"[/chat] message: {req.message}")
-    result = run_llm(query=req.message)
+    log_info(f"[/chat] session={req.session_id} message: {req.message}")
+    result = run_llm(query=req.message, session_id=req.session_id)
     raw_sources = [
         str(doc.metadata.get("source") or "Unknown")
         for doc in (result.get("context") or [])

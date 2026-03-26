@@ -1,6 +1,6 @@
 from langchain.tools import tool
 
-from services.market_data_service import get_market_data
+from services.market_data_service import get_market_data, get_price_history
 from services.news_service import get_market_news as _get_market_news
 
 
@@ -35,6 +35,20 @@ def get_market_news(ticker: str):
     )
     sources = [a.url for a in articles]
     return serialized, sources
+
+
+@tool
+def get_stock_price_history(ticker: str, period: str = "1mo") -> str:
+    """Get historical daily closing prices for a stock, ETF, or bond by ticker symbol.
+    Data is sourced from Yahoo Finance. Use this when the user asks about price trends,
+    historical performance, or how a security has moved over time (e.g. VTI, AAPL, SPY).
+    Valid periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, ytd, max.
+    """
+    points = get_price_history(ticker, period=period)
+    if not points:
+        return f"No historical data found for {ticker.upper()}."
+    lines = "\n".join(f"{p.date}: ${p.close}" for p in points)
+    return f"Historical closing prices for {ticker.upper()} ({period}):\n{lines}"
 
 
 if __name__ == "__main__":
