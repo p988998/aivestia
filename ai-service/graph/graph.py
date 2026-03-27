@@ -33,12 +33,13 @@ workflow.add_edge(CHAT_AGENT, END)
 workflow.add_edge(PORTFOLIO_AGENT, END)
 
 app = workflow.compile(checkpointer=MemorySaver())
-app.get_graph().draw_mermaid_png(output_file_path="graph.png")
+
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
+    app.get_graph().draw_mermaid_png(output_file_path="graph.png")
 
     result = app.invoke({"question": "I have VTI and BND in my portfolio, should I rebalance?"})
     print(result["answer"])

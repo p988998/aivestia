@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import os
 import ssl
 from typing import Any, Dict, List
@@ -9,7 +10,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
-from langchain_tavily import TavilyCrawl, TavilyExtract, TavilyMap
+from langchain_tavily import TavilyCrawl
 from utils.logger import (Colors, log_error, log_header, log_info, log_success, log_warning)
 
 load_dotenv()
@@ -30,8 +31,7 @@ embeddings = OpenAIEmbeddings(
 vectorstore = PineconeVectorStore(
     index_name=os.environ["INDEX_NAME"] , embedding=embeddings
 )
-tavily_extract = TavilyExtract()
-tavily_map = TavilyMap(max_depth=3, max_breadth=50, max_pages=200)
+tavily_crawl = TavilyCrawl(max_depth=1, max_breadth=10)
 
 SOURCES = [
     "https://www.investopedia.com/etfs-4427784",
@@ -39,6 +39,24 @@ SOURCES = [
     "https://www.investopedia.com/stocks-4427785",
     "https://www.investopedia.com/bonds-4689778",
     "https://www.investopedia.com/portfolio-management-4689748",
+    "https://www.investopedia.com/terms/m/modernportfoliotheory.asp",
+    # Asset Allocation
+    "https://www.investopedia.com/terms/a/assetallocation.asp",
+    "https://investor.vanguard.com/investor-resources-education/how-to-invest/asset-allocation",
+    ## **Diversification
+    "https://www.investopedia.com/terms/d/diversification.asp",
+    # **Strategic Asset Allocation
+    "https://www.vanguard.co.uk/professional/vanguard-365/investment-knowledge/portfolio-construction/strategic-asset-allocation",
+    # classic allocation-strategies
+    "https://www.investopedia.com/investing/6-asset-allocation-strategies-work/",
+    # Buffett 90/10 Strategy
+    "https://www.investopedia.com/how-warren-buffett-s-90-10-rule-can-transform-your-investment-strategy-in-simple-steps-11919302",
+    # Age-based Allocation
+    "https://www.investor.gov/additional-resources/general-resources/publications-research/info-sheets/beginners-guide-asset",
+    # Portfolio Construction
+    "https://www.investopedia.com/financial-advisor/steps-building-profitable-portfolio",
+    # Rebalancing
+    "https://smartasset.com/investing/asset-allocation-calculator",
 ]
 
 
@@ -50,19 +68,26 @@ async def index_documents_async(documents: List[Document], batch_size: int = 50)
         Colors.DARKCYAN,
     )
 
+    # Generate deterministic IDs based on source URL + chunk index to prevent duplicates on re-run
+    ids = [
+        hashlib.md5(f"{doc.metadata['source']}_{i}".encode()).hexdigest()
+        for i, doc in enumerate(documents)
+    ]
+
     # Create batches
     batches = [
         documents[i : i + batch_size] for i in range(0, len(documents), batch_size)
     ]
+    id_batches = [ids[i : i + batch_size] for i in range(0, len(ids), batch_size)]
 
     log_info(
         f"📦 VectorStore Indexing: Split into {len(batches)} batches of {batch_size} documents each"
     )
 
     # Process all batches concurrently
-    async def add_batch(batch: List[Document], batch_num: int):
+    async def add_batch(batch: List[Document], id_batch: List[str], batch_num: int):
         try:
-            await vectorstore.aadd_documents(batch)
+            await vectorstore.aadd_documents(batch, ids=id_batch)
             log_success(
                 f"VectorStore Indexing: Successfully added batch {batch_num}/{len(batches)} ({len(batch)} documents)"
             )
@@ -71,9 +96,11 @@ async def index_documents_async(documents: List[Document], batch_size: int = 50)
             return False
         return True
 
-    # Process batches concurrently
-    tasks = [add_batch(batch, i + 1) for i, batch in enumerate(batches)]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    # Process batches sequentially to avoid shared session conflicts
+    results = []
+    for i, batch in enumerate(batches):
+        result = await add_batch(batch, id_batches[i], i + 1)
+        results.append(result)
 
     # Count successful batches
     successful = sum(1 for result in results if result is True)
@@ -92,46 +119,34 @@ async def main():
     """Main async function to orchestrate the entire process."""
     log_header("DOCUMENTATION INGESTION PIPELINE")
 
-    # Phase 1: Discover URLs from all category pages via TavilyMap
-    log_header("URL DISCOVERY PHASE")
-    discovered_urls: set[str] = set()
+    # Phase 1: Crawl content from all source URLs
+    log_header("CRAWL PHASE")
+    all_docs: List[Document] = []
+    seen_urls: set[str] = set()
 
     for source_url in SOURCES:
-        log_info(f"🗺️  TavilyMap: Mapping {source_url}", Colors.PURPLE)
+        log_info(f"🕷️  TavilyCrawl: Crawling {source_url}", Colors.PURPLE)
         try:
-            map_result = tavily_map.invoke({"url": source_url})
-            urls = map_result if isinstance(map_result, list) else map_result.get("urls", [])
-            before = len(discovered_urls)
-            discovered_urls.update(u for u in urls if "investopedia.com" in u)
-            log_success(f"TavilyMap: Found {len(discovered_urls) - before} new URLs from {source_url}")
-        except Exception as e:
-            log_error(f"TavilyMap: Failed for {source_url} - {e}")
-
-    log_info(f"📋 Total unique URLs discovered: {len(discovered_urls)}", Colors.BOLD)
-
-    # Phase 2: Extract content from discovered URLs in batches
-    log_header("CONTENT EXTRACTION PHASE")
-    all_docs: List[Document] = []
-    url_list = list(discovered_urls)
-    batch_size = 20
-
-    for i in range(0, len(url_list), batch_size):
-        batch_urls = url_list[i:i + batch_size]
-        batch_num = i // batch_size + 1
-        log_info(f"📄 TavilyExtract: Extracting batch {batch_num} ({len(batch_urls)} URLs)", Colors.DARKCYAN)
-        try:
-            extract_result = tavily_extract.invoke({"urls": batch_urls})
-            results = extract_result if isinstance(extract_result, list) else extract_result.get("results", [])
+            crawl_result = tavily_crawl.invoke({"url": source_url})
+            if isinstance(crawl_result, list):
+                results = crawl_result
+            elif isinstance(crawl_result, dict):
+                results = crawl_result.get("results", [])
+            else:
+                results = []
+            new_count = 0
             for item in results:
-                content = item.get("raw_content") or item.get("content", "")
                 url = item.get("url", "")
-                if content and url:
+                content = item.get("raw_content") or item.get("content", "")
+                if content and url and url not in seen_urls:
+                    seen_urls.add(url)
                     all_docs.append(Document(page_content=content, metadata={"source": url}))
-            log_success(f"TavilyExtract: Batch {batch_num} — extracted {len(results)} pages")
+                    new_count += 1
+            log_success(f"TavilyCrawl: {source_url} → {new_count} new pages")
         except Exception as e:
-            log_error(f"TavilyExtract: Batch {batch_num} failed - {e}")
+            log_error(f"TavilyCrawl: Failed for {source_url} - {e}")
 
-    log_info(f"📚 Total documents extracted: {len(all_docs)}", Colors.BOLD)
+    log_info(f"📚 Total documents crawled: {len(all_docs)}", Colors.BOLD)
 
     # Phase 3: Chunk documents
     log_header("DOCUMENT CHUNKING PHASE")
@@ -149,8 +164,8 @@ async def main():
     log_header("PIPELINE COMPLETE")
     log_success("🎉 Documentation ingestion pipeline finished successfully!")
     log_info("📊 Summary:", Colors.BOLD)
-    log_info(f"   • Category URLs crawled: {len(SOURCES)}")
-    log_info(f"   • Unique pages discovered: {len(discovered_urls)}")
+    log_info(f"   • Source URLs crawled: {len(SOURCES)}")
+    log_info(f"   • Unique pages collected: {len(seen_urls)}")
     log_info(f"   • Documents extracted: {len(all_docs)}")
     log_info(f"   • Chunks indexed: {len(splitted_docs)}")
 
