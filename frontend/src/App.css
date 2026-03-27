@@ -896,6 +896,105 @@
   cursor: default;
 }
 
+/* ── Holdings ── */
+.holdings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.holdings-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.holding-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.holding-ticker-input {
+  width: 80px;
+  background: #13131a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 13px;
+  padding: 7px 10px;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: border-color 0.2s;
+}
+
+.holding-raw-input {
+  width: 70px;
+  background: #13131a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 13px;
+  padding: 7px 10px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.holding-ticker-input:focus,
+.holding-raw-input:focus {
+  outline: none;
+  border-color: rgba(99,102,241,0.5);
+}
+
+.holding-pct {
+  font-size: 12px;
+  color: #64748b;
+  min-width: 42px;
+}
+
+.holding-delete {
+  background: transparent;
+  border: none;
+  color: #475569;
+  font-size: 18px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.holding-delete:hover {
+  color: #f87171;
+  background: rgba(248,113,113,0.1);
+}
+
+.btn-add-holding {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.15);
+  color: #64748b;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  font-family: inherit;
+  margin-top: 2px;
+}
+
+.btn-add-holding:hover {
+  border-color: rgba(99,102,241,0.4);
+  color: #94a3b8;
+}
+
 /* ── Interest Pills ── */
 .interest-section {
   display: flex;
@@ -907,6 +1006,12 @@
   font-size: 14px;
   font-weight: 500;
   color: #94a3b8;
+}
+
+.interest-hint {
+  font-size: 12px;
+  color: #475569;
+  margin-top: -4px;
 }
 
 .interest-optional {
@@ -931,6 +1036,47 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   font-family: inherit;
+  position: relative;
+}
+
+.interest-pill[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1b4b;
+  color: #e0e7ff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 7px 11px;
+  border-radius: 7px;
+  border: 1px solid #4338ca;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  width: max-content;
+  max-width: 220px;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.interest-pill[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top: 5px solid #4338ca;
+  pointer-events: none;
+  z-index: 101;
+}
+
+.interest-pill:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .interest-pill:hover {
@@ -943,6 +1089,26 @@
   background: rgba(99,102,241,0.2);
   border-color: #6366f1;
   color: #a5b4fc;
+}
+
+.pill-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(99,102,241,0.3);
+  color: #c7d2fe;
+  font-size: 10px;
+  font-weight: 600;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+.pill-order-primary {
+  background: #6366f1;
+  color: #fff;
 }
 
 /* ── Portfolio Result ── */

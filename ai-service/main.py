@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core import run_llm
-from services.portfolio_service import Allocation, get_allocations
+from services.portfolio_service import Allocation, apply_interest_tilts, get_allocations
 from utils.logger import log_info, log_success
 
 app = FastAPI()
@@ -33,6 +33,7 @@ class PortfolioRequest(BaseModel):
     age: int
     riskLevel: str
     horizon: int
+    interests: list[str] = []
 
 
 class PortfolioResponse(BaseModel):
@@ -65,7 +66,7 @@ def chat(req: ChatRequest):
 @app.post("/portfolio", response_model=PortfolioResponse)
 def portfolio(req: PortfolioRequest):
     log_info(f"[/portfolio] age={req.age}, riskLevel={req.riskLevel}, horizon={req.horizon}")
-    allocations = get_allocations(req.riskLevel)
+    allocations = apply_interest_tilts(get_allocations(req.riskLevel), req.interests)
     response = PortfolioResponse(
         allocations=allocations,
         age=req.age,

@@ -12,9 +12,11 @@ _model = init_chat_model("gpt-5.4", model_provider="openai")
 _SYSTEM_PROMPT = (
     "You are a portfolio advisor AI that provides personalized investment recommendations. "
     "Your job is to help users with portfolio analysis, rebalancing, and investment advice. "
-    "You have access to a rule engine that provides baseline allocation recommendations "
-    "based on risk level. Call get_rule_based_allocation with the user's risk level "
-    "before or during your analysis to use it as a reference point. "
+    "You have access to a rule engine that provides allocation recommendations. "
+    "Call get_rule_based_allocation with the user's risk level before or during your analysis. "
+    "If the user's interests are available in their profile, pass them as a comma-separated "
+    "string to get their personalized interest-adjusted allocation instead of the plain baseline. "
+    "Example: get_rule_based_allocation('medium', 'Tech & Growth, Dividend Income'). "
     "You also have access to real-time market prices, historical price data, market news, "
     "and relevant investment documentation. "
     "Use these tools to look up the current price, recent performance, and news of any "
@@ -39,11 +41,17 @@ def run(messages: list, user_profile: dict = {}) -> Dict[str, Any]:
     if user_profile:
         interests = user_profile.get("interests") or []
         interests_text = f", interests: {', '.join(interests)}" if interests else ""
+        holdings = user_profile.get("holdings") or []
+        valid_holdings = [h for h in holdings if h.get("ticker") and h.get("weight")]
+        holdings_text = (
+            " Current holdings: " + ", ".join(f"{h['ticker']} {h['weight']}%" for h in valid_holdings) + "."
+            if valid_holdings else ""
+        )
         profile_text = (
             f"User profile: age={user_profile.get('age')}, "
             f"risk tolerance={user_profile.get('riskLevel')}, "
             f"investment horizon={user_profile.get('horizon')} years"
-            f"{interests_text}."
+            f"{interests_text}.{holdings_text}"
         )
         full_messages.append({"role": "system", "content": profile_text})
     full_messages += messages
