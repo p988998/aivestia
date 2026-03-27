@@ -10,15 +10,19 @@ def get_market_price(ticker: str) -> str:
     Data is sourced from Yahoo Finance. Use this when the user asks about the current
     price, performance, or market data of a specific security (e.g. VTI, AAPL, BND, SPY).
     """
-    data = get_market_data(ticker)
-    return (
-        f"Ticker: {data.ticker}\n"
-        f"Current Price: ${data.current_price:.2f}\n"
-        f"Previous Close: ${data.previous_close:.2f}\n"
-        f"Day Change: {data.day_change_pct:+.2f}%\n"
-        f"52-Week High: ${data.year_high:.2f}\n"
-        f"52-Week Low: ${data.year_low:.2f}"
-    )
+    try:
+        data = get_market_data(ticker)
+        return (
+            f"Ticker: {data.ticker}\n"
+            f"Current Price: ${data.current_price:.2f}\n"
+            f"Previous Close: ${data.previous_close:.2f}\n"
+            f"Day Change: {data.day_change_pct:+.2f}%\n"
+            f"52-Week High: ${data.year_high:.2f}\n"
+            f"52-Week Low: ${data.year_low:.2f}"
+        )
+    except ValueError as e:
+        return str(e)
+
 
 @tool(response_format="content_and_artifact")
 def get_market_news(ticker: str):
@@ -26,15 +30,18 @@ def get_market_news(ticker: str):
     Data is sourced from Finnhub. Use this when the user asks about recent news,
     events, or sentiment for a specific security (e.g. VTI, AAPL, BND, SPY).
     """
-    articles = _get_market_news(ticker)
-    if not articles:
-        return f"No recent news found for {ticker.upper()}.", []
-    serialized = "\n\n".join(
-        f"[{a.published_at}] {a.headline} ({a.source})\n{a.summary}"
-        for a in articles
-    )
-    sources = [a.url for a in articles]
-    return serialized, sources
+    try:
+        articles = _get_market_news(ticker)
+        if not articles:
+            return f"No recent news found for {ticker.upper()}.", []
+        serialized = "\n\n".join(
+            f"[{a.published_at}] {a.headline} ({a.source})\n{a.summary}"
+            for a in articles
+        )
+        sources = [a.url for a in articles]
+        return serialized, sources
+    except ValueError as e:
+        return str(e), []
 
 
 @tool
@@ -44,11 +51,12 @@ def get_stock_price_history(ticker: str, period: str = "1mo") -> str:
     historical performance, or how a security has moved over time (e.g. VTI, AAPL, SPY).
     Valid periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, ytd, max.
     """
-    points = get_price_history(ticker, period=period)
-    if not points:
-        return f"No historical data found for {ticker.upper()}."
-    lines = "\n".join(f"{p.date}: ${p.close}" for p in points)
-    return f"Historical closing prices for {ticker.upper()} ({period}):\n{lines}"
+    try:
+        points = get_price_history(ticker, period=period)
+        lines = "\n".join(f"{p.date}: ${p.close}" for p in points)
+        return f"Historical closing prices for {ticker.upper()} ({period}):\n{lines}"
+    except ValueError as e:
+        return str(e)
 
 
 if __name__ == "__main__":

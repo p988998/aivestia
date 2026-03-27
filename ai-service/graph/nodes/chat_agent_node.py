@@ -22,10 +22,12 @@ def chat_agent_node(state: GraphState) -> GraphState:
     messages = ([profile_msg] if profile_msg else []) + history + [{"role": "user", "content": state["question"]}]
     result = chat_agent_run(messages)
     return {
-        "answer":    result["answer"],
-        "context":   result.get("context", []),
-        "news_urls": result.get("news_urls", []),
-        "history":   [
+        "answer":       result["answer"],
+        "context":      result.get("context", []),
+        "news_urls":    result.get("news_urls", []),
+        "tool_outputs": result.get("tool_outputs", []),
+        "retry_count":  0,
+        "history":      [
             {"role": "user",      "content": state["question"]},
             {"role": "assistant", "content": result["answer"]},
         ],

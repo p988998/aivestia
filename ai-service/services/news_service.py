@@ -19,23 +19,26 @@ class NewsArticle(BaseModel):
 
 
 def get_market_news(ticker: str, days: int = 7, limit: int = 5) -> list[NewsArticle]:
-    to_date = date.today()
-    from_date = to_date - timedelta(days=days)
-    raw = finnhub_client.company_news(
-        ticker.upper(),
-        _from=from_date.isoformat(),
-        to=to_date.isoformat(),
-    )
-    return [
-        NewsArticle(
-            headline=item.get("headline", ""),
-            summary=item.get("summary", ""),
-            source=item.get("source", ""),
-            url=item.get("url", ""),
-            published_at=datetime.fromtimestamp(item["datetime"], tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    try:
+        to_date = date.today()
+        from_date = to_date - timedelta(days=days)
+        raw = finnhub_client.company_news(
+            ticker.upper(),
+            _from=from_date.isoformat(),
+            to=to_date.isoformat(),
         )
-        for item in raw[:limit]
-    ]
+        return [
+            NewsArticle(
+                headline=item.get("headline", ""),
+                summary=item.get("summary", ""),
+                source=item.get("source", ""),
+                url=item.get("url", ""),
+                published_at=datetime.fromtimestamp(item["datetime"], tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            )
+            for item in raw[:limit]
+        ]
+    except Exception as e:
+        raise ValueError(f"Failed to fetch news for '{ticker.upper()}': {e}")
 
 
 if __name__ == "__main__":

@@ -16,8 +16,12 @@ _SYSTEM_PROMPT = (
     "You also have access to a tool that fetches real-time market news. "
     "You also have access to a tool that fetches historical daily closing prices for stocks, ETFs, and bonds. "
     "Use the tools to find relevant information before answering questions. "
+    "Always fetch recent market news for any ticker or asset mentioned in the question, "
+    "unless the question is purely conceptual or definitional (e.g. 'what is an ETF?'). "
     "Always cite the sources you use in your answers. "
-    "If you cannot find the answer in the retrieved documentation, say so."
+    "If you cannot find the answer in the retrieved documentation, say so. "
+    "If a tool returns an error, acknowledge the limitation to the user and "
+    "answer based on available information rather than guessing."
 )
 
 _agent = create_agent(
@@ -44,4 +48,10 @@ def run(messages: list) -> Dict[str, Any]:
                 else:
                     context_docs.append(item)
 
-    return {"answer": answer, "context": context_docs, "news_urls": news_urls}
+    tool_outputs = [
+        message.content
+        for message in response["messages"]
+        if isinstance(message, ToolMessage)
+    ]
+
+    return {"answer": answer, "context": context_docs, "news_urls": news_urls, "tool_outputs": tool_outputs}

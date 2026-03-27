@@ -10,3 +10,6 @@ class GraphState(TypedDict):
     news_urls:    list
     history:      Annotated[list, operator.add]
     user_profile: dict
+    tool_outputs: list
+    grounded:     bool
+    retry_count:  int

@@ -11,4 +11,7 @@ vectorstore = PineconeVectorStore(
 
 
 def get_relevant_docs(query: str, k: int = 4) -> list[Document]:
-    return vectorstore.as_retriever().invoke(query, k=k)
+    try:
+        return vectorstore.as_retriever().invoke(query, k=k)
+    except Exception as e:
+        raise ValueError(f"Failed to retrieve documents from vector store: {e}")
