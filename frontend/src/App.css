@@ -289,6 +289,44 @@
   30% { transform: translateY(-6px); opacity: 1; }
 }
 
+.suggestion-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 16px 4px;
+}
+
+.suggestion-label {
+  width: 100%;
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.suggestion-chip {
+  background: transparent;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.suggestion-chip:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
+  color: #e0e7ff;
+}
+
+.suggestion-chip:active {
+  background: rgba(99, 102, 241, 0.25);
+}
+
 .chat-input-bar {
   display: flex;
   align-items: flex-end;
@@ -1042,6 +1080,64 @@
   opacity: 0.35;
   cursor: default;
 }
+
+/* ── Risk Pills ── */
+.risk-pills {
+  display: flex;
+  gap: 8px;
+}
+
+.risk-pill {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #64748b;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  position: relative;
+}
+
+.risk-pill[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1b4b;
+  color: #e0e7ff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 8px 12px;
+  border-radius: 7px;
+  border: 1px solid #4338ca;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  width: 220px;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.risk-pill[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top: 5px solid #4338ca;
+  pointer-events: none;
+  z-index: 101;
+}
+
+.risk-pill-active.risk-pill-low    { background: rgba(34,197,94,0.12);  border-color: rgba(34,197,94,0.5);  color: #4ade80; }
+.risk-pill-active.risk-pill-medium { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.5); color: #fbbf24; }
+.risk-pill-active.risk-pill-high   { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.5); color: #f87171; }
 
 /* ── Holdings ── */
 .holdings-section {

@@ -30,7 +30,7 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -80,6 +80,22 @@ class MessageOut(BaseModel):
     content: str
     sources: list[str] = []
     simulations: list | None = None
+
+
+class SuggestionsRequest(BaseModel):
+    last_message: str
+
+
+class SuggestionsResponse(BaseModel):
+    suggestions: list[str]
+
+
+class SuggestionsRequest(BaseModel):
+    last_message: str
+
+
+class SuggestionsResponse(BaseModel):
+    suggestions: list[str]
 
 
 # ---------- Helpers ----------
@@ -151,6 +167,54 @@ def get_messages(chat_id: str):
         }
         for r in rows
     ]
+
+
+# ---------- Suggestions endpoint ----------
+
+@app.post("/suggestions", response_model=SuggestionsResponse)
+def get_suggestions(req: SuggestionsRequest):
+    from langchain_openai import ChatOpenAI
+
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    prompt = f"""
+You are a financial assistant.
+
+Based on the following response, generate exactly 3 follow-up questions.
+
+Requirements:
+- 5-10 words each
+- Specific and actionable
+- Investment-related
+
+Return JSON:
+{{
+  "questions": ["...", "...", "..."]
+}}
+
+Response:
+{req.last_message[:800]}
+"""
+    fallback = [
+        "Compare with S&P 500?",
+        "What are the risks here?",
+        "How can I improve this portfolio?",
+    ]
+    try:
+        result = llm.invoke(prompt)
+        data = json.loads(result.content)
+        questions = data.get("questions", [])
+        seen = set()
+        clean_q = []
+        for q in questions:
+            q = q.strip()
+            if not q.endswith("?"):
+                q += "?"
+            if 5 <= len(q.split()) <= 10 and q not in seen:
+                seen.add(q)
+                clean_q.append(q)
+        return SuggestionsResponse(suggestions=clean_q[:3] if len(clean_q) >= 3 else fallback)
+    except Exception:
+        return SuggestionsResponse(suggestions=fallback)
 
 
 # ---------- Chat (LLM) endpoint ----------

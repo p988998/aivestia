@@ -237,6 +237,7 @@ function ChatPage({ onBack, userId }) {
   const [input, setInput] = useState('')
   const [loadingChatId, setLoadingChatId] = useState(null)
   const [portfolioContext, setPortfolioContext] = useState(null)
+  const [suggestions, setSuggestions] = useState([])
   const [editingChatId, setEditingChatId] = useState(null)
   const [editingTitle, setEditingTitle] = useState('')
   const bottomRef = useRef(null)
@@ -280,8 +281,23 @@ function ChatPage({ onBack, userId }) {
     }
   }
 
+  async function fetchSuggestions(lastAssistantMessage) {
+    try {
+      const res = await fetch(`${API}/suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ last_message: lastAssistantMessage }),
+      })
+      const data = await res.json()
+      setSuggestions(data.suggestions || [])
+    } catch {
+      setSuggestions([])
+    }
+  }
+
   async function selectChat(chatId) {
     setActiveChatId(chatId)
+    setSuggestions([])
     setMode('chat')
     try {
       const res = await fetch(`${API}/chats/${chatId}/messages`)
@@ -334,11 +350,12 @@ function ChatPage({ onBack, userId }) {
     }
   }
 
-  async function handleSend() {
-    const text = input.trim()
+  async function handleSend(overrideText) {
+    const text = (overrideText !== undefined ? overrideText : input).trim()
     const chatId = activeChatId
     if (!text || loadingChatId || !chatId) return
     setInput('')
+    setSuggestions([])
     setMessages(prev => [...prev, { role: 'user', content: text, sources: [] }])
     setLoadingChatId(chatId)
     try {
@@ -355,6 +372,7 @@ function ChatPage({ onBack, userId }) {
           ? { ...c, title: text.slice(0, 40) }
           : c
       ))
+      fetchSuggestions(data.answer)
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, the AI service is unavailable. Please make sure it is running on port 8000.', sources: [] }])
     } finally {
@@ -458,6 +476,12 @@ function ChatPage({ onBack, userId }) {
               <div ref={bottomRef} />
             </div>
 
+            <SuggestionBar
+              suggestions={suggestions}
+              isEmptyState={messages.length === 1 && messages[0].role === 'assistant'}
+              visible={!loadingChatId}
+              onSelect={(text) => handleSend(text)}
+            />
             <div className="chat-input-bar">
               <textarea
                 className="chat-input"
@@ -476,6 +500,28 @@ function ChatPage({ onBack, userId }) {
 
         {mode === 'portfolio' && <PortfolioForm onSaveForChat={handleSaveForChat} savedProfile={portfolioContext} />}
       </div>
+    </div>
+  )
+}
+
+const EMPTY_STATE_SUGGESTIONS = [
+  "Build a portfolio for a medium risk investor",
+  "Analyze today's financial market",
+  "What should I invest in right now?",
+]
+
+function SuggestionBar({ suggestions, isEmptyState, visible, onSelect }) {
+  if (!visible) return null
+  const chips = isEmptyState ? EMPTY_STATE_SUGGESTIONS : suggestions
+  if (chips.length === 0) return null
+  return (
+    <div className="suggestion-bar">
+      <span className="suggestion-label">You can ask questions like</span>
+      {chips.map((s, i) => (
+        <button key={i} className="suggestion-chip" onClick={() => onSelect(s)}>
+          {s}
+        </button>
+      ))}
     </div>
   )
 }
@@ -554,14 +600,24 @@ function PortfolioForm({ onSaveForChat, savedProfile }) {
           <input type="number" min="18" max="100" value={form.age}
             onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
         </label>
-        <label className="form-label">
+        <div className="form-label">
           Risk Level
-          <select value={form.riskLevel} onChange={e => setForm(f => ({ ...f, riskLevel: e.target.value }))}>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </label>
+          <div className="risk-pills">
+            {[
+              { value: 'low',    label: 'Low',    tooltip: 'Focuses on capital preservation with minimal volatility. Lower expected returns but more stable performance. Suitable for short-term goals or risk-averse investors.' },
+              { value: 'medium', label: 'Medium', tooltip: 'Balances growth and stability with a mix of equities and bonds. Moderate returns with manageable fluctuations. Suitable for mid-term horizons (3–7 years).' },
+              { value: 'high',   label: 'High',   tooltip: 'Targets long-term growth through equity-heavy exposure. Higher return potential with significant short-term volatility. Suitable for long-term investors (7+ years).' },
+            ].map(({ value, label, tooltip }) => (
+              <button
+                key={value}
+                type="button"
+                className={`risk-pill risk-pill-${value} ${form.riskLevel === value ? 'risk-pill-active' : ''}`}
+                onClick={() => setForm(f => ({ ...f, riskLevel: value }))}
+                data-tooltip={tooltip}
+              >{label}</button>
+            ))}
+          </div>
+        </div>
         <label className="form-label">
           Investment Horizon (years)
           <input type="number" min="1" max="50" value={form.horizon}
