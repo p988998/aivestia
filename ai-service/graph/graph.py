@@ -1,4 +1,3 @@
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from graph.consts import CHAT_AGENT, HALLUCINATION_CHECK, PORTFOLIO_AGENT, ROUTER
@@ -19,44 +18,32 @@ def _after_check(state: GraphState) -> str:
     return state["datasource"]
 
 
-workflow = StateGraph(GraphState)
+def build_graph(checkpointer):
+    workflow = StateGraph(GraphState)
 
-workflow.add_node(ROUTER, router_node)
-workflow.add_node(CHAT_AGENT, chat_agent_node)
-workflow.add_node(PORTFOLIO_AGENT, portfolio_agent_node)
-workflow.add_node(HALLUCINATION_CHECK, hallucination_check_node)
+    workflow.add_node(ROUTER, router_node)
+    workflow.add_node(CHAT_AGENT, chat_agent_node)
+    workflow.add_node(PORTFOLIO_AGENT, portfolio_agent_node)
+    workflow.add_node(HALLUCINATION_CHECK, hallucination_check_node)
 
-workflow.set_entry_point(ROUTER)
+    workflow.set_entry_point(ROUTER)
 
-workflow.add_conditional_edges(
-    ROUTER,
-    _route,
-    {
-        CHAT_AGENT: CHAT_AGENT,
-        PORTFOLIO_AGENT: PORTFOLIO_AGENT,
-    },
-)
+    workflow.add_conditional_edges(
+        ROUTER,
+        _route,
+        {
+            CHAT_AGENT: CHAT_AGENT,
+            PORTFOLIO_AGENT: PORTFOLIO_AGENT,
+        },
+    )
 
-workflow.add_edge(CHAT_AGENT, HALLUCINATION_CHECK)
-workflow.add_edge(PORTFOLIO_AGENT, HALLUCINATION_CHECK)
+    workflow.add_edge(CHAT_AGENT, HALLUCINATION_CHECK)
+    workflow.add_edge(PORTFOLIO_AGENT, HALLUCINATION_CHECK)
 
-workflow.add_conditional_edges(
-    HALLUCINATION_CHECK,
-    _after_check,
-    {CHAT_AGENT: CHAT_AGENT, PORTFOLIO_AGENT: PORTFOLIO_AGENT, END: END},
-)
+    workflow.add_conditional_edges(
+        HALLUCINATION_CHECK,
+        _after_check,
+        {CHAT_AGENT: CHAT_AGENT, PORTFOLIO_AGENT: PORTFOLIO_AGENT, END: END},
+    )
 
-app = workflow.compile(checkpointer=MemorySaver())
-
-
-
-if __name__ == "__main__":
-    import sys
-    from dotenv import load_dotenv
-    load_dotenv()
-    app.get_graph().draw_mermaid_png(output_file_path="graph.png")
-    print("graph.png saved")
-
-    if "--png-only" not in sys.argv:
-        result = app.invoke({"question": "I have VTI and BND in my portfolio, should I rebalance?"})
-        print(result["answer"])
+    return workflow.compile(checkpointer=checkpointer)
