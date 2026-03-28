@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import './App.css'
 
 function renderMarkdown(text) {
@@ -19,7 +20,7 @@ async function fetchAIResponse(message, sessionId, userProfile = null) {
   })
   if (!res.ok) throw new Error('AI service error')
   const data = await res.json()
-  return { answer: data.answer, sources: data.sources || [] }
+  return { answer: data.answer, sources: data.sources || [], simulations: data.simulations || null }
 }
 
 export default function App() {
@@ -242,8 +243,8 @@ function ChatPage({ onBack }) {
     setMessages(prev => [...prev, { role: 'user', content: text, sources: [] }])
     setLoading(true)
     try {
-      const { answer, sources } = await fetchAIResponse(text, sessionId, portfolioContext)
-      setMessages(prev => [...prev, { role: 'assistant', content: answer, sources }])
+      const { answer, sources, simulations } = await fetchAIResponse(text, sessionId, portfolioContext)
+      setMessages(prev => [...prev, { role: 'assistant', content: answer, sources, simulations }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, the AI service is unavailable. Please make sure it is running on port 8000.', sources: [] }])
     } finally {
@@ -289,10 +290,8 @@ function ChatPage({ onBack }) {
                   <div key={i} className={`bubble-wrap ${msg.role}`}>
                     {msg.role === 'assistant' && <div className="avatar">◈</div>}
                     <div className="bubble-content">
-                      {msg.type === 'portfolio'
-                        ? <PortfolioResult {...msg.portfolio} />
-                        : <div className={`bubble ${msg.role}`} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
-                      }
+                      <div className={`bubble ${msg.role}`} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
+                      {msg.simulations?.map((sim, i) => <SimulationCard key={i} simulation={sim} />)}
                       {msg.sources?.length > 0 && (
                         <SourcesPanel sources={msg.sources} />
                       )}
@@ -483,32 +482,59 @@ function PortfolioForm({ onSaveForChat, savedProfile }) {
   )
 }
 
-function PortfolioResult({ allocations, age, riskLevel, horizon }) {
-  const riskColor = { low: '#22c55e', medium: '#fbbf24', high: '#f87171' }[riskLevel]
-  const label = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)
+function SimulationCard({ simulation }) {
+  if (!simulation) return null
+  const { label, allocations, performance } = simulation
   return (
-    <div className="portfolio-result">
-      <div className="card-label">Your Portfolio · {label} Risk</div>
-      <div className="allocation-list">
-        {allocations.map(a => <AllocationRow key={a.ticker} {...a} />)}
-      </div>
-      <div className="card-footer">
-        <div className="card-stat">
-          <span className="stat-label">Age</span>
-          <span className="stat-value">{age}</span>
+    <div className="simulation-card">
+      {label && <div className="simulation-label">{label}</div>}
+      {allocations?.length > 0 && (
+        <div className="simulation-allocs">
+          {allocations.map((a, i) => <AllocationRow key={a.ticker ?? i} {...a} />)}
         </div>
-        <div className="card-stat">
-          <span className="stat-label">Horizon</span>
-          <span className="stat-value">{horizon} yr</span>
+      )}
+      <PerformanceChart performance={performance} />
+    </div>
+  )
+}
+
+function PerformanceChart({ performance }) {
+  if (!performance) return null
+  const { data_points, total_return_pct, annualized_return_pct, period } = performance
+  const periodLabel = { '1y': '1 Year', '2y': '2 Years', '5y': '5 Years' }[period] || period
+  const isPositive = total_return_pct >= 0
+  const lineColor = isPositive ? '#22c55e' : '#f87171'
+  const step = Math.max(1, Math.floor(data_points.length / 120))
+  const chartData = data_points.filter((_, i) => i % step === 0 || i === data_points.length - 1)
+  return (
+    <div className="perf-section">
+      <div className="perf-header">Historical Simulation · {periodLabel}</div>
+      <ResponsiveContainer width="100%" height={130}>
+        <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+          <XAxis dataKey="date" hide />
+          <YAxis domain={['auto', 'auto']} hide />
+          <Tooltip
+            formatter={(v) => [`${v.toFixed(1)}`, 'Index']}
+            contentStyle={{ background: '#1e1e2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+            labelStyle={{ color: '#64748b', fontSize: 10 }}
+          />
+          <Line type="monotone" dataKey="value" stroke={lineColor} dot={false} strokeWidth={1.5} />
+        </LineChart>
+      </ResponsiveContainer>
+      <div className="perf-stats">
+        <div className="perf-stat">
+          <span className="perf-stat-label">Total Return</span>
+          <span className="perf-stat-value" style={{ color: lineColor }}>{isPositive ? '+' : ''}{total_return_pct.toFixed(1)}%</span>
         </div>
-        <div className="card-stat">
-          <span className="stat-label">Risk</span>
-          <span className="stat-value" style={{ color: riskColor }}>{label}</span>
+        <div className="perf-stat">
+          <span className="perf-stat-label">Annualized</span>
+          <span className="perf-stat-value" style={{ color: lineColor }}>{isPositive ? '+' : ''}{annualized_return_pct.toFixed(1)}% / yr</span>
         </div>
       </div>
     </div>
   )
 }
+
 
 function SourcesPanel({ sources }) {
   const [open, setOpen] = useState(false)

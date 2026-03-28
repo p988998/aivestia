@@ -1,10 +1,11 @@
 import re
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core import run_llm
+from services.performance_service import PerformanceResult, period_for_risk, simulate_portfolio
 from services.portfolio_service import Allocation, apply_interest_tilts, get_allocations
 from utils.logger import log_info, log_success
 
@@ -27,6 +28,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: list[str]
+    simulations: list | None = None
 
 
 class PortfolioRequest(BaseModel):
@@ -41,6 +43,11 @@ class PortfolioResponse(BaseModel):
     age: int
     riskLevel: str
     horizon: int
+
+
+class PerformanceRequest(BaseModel):
+    allocations: list[dict]  # [{"ticker": str, "weight": int}]
+    riskLevel: str
 
 
 def _strip_source_suffix(text: str) -> str:
@@ -59,8 +66,9 @@ def chat(req: ChatRequest):
     ] + (result.get("news_urls") or [])
     sources = list(dict.fromkeys(raw_sources))  # deduplicate, preserve order
     answer = _strip_source_suffix(result["answer"])
-    log_success(f"[/chat] answer: {answer[:120]}{'...' if len(answer) > 120 else ''} | sources: {len(sources)}")
-    return ChatResponse(answer=answer, sources=sources)
+    simulations = result.get("simulations") or None
+    log_success(f"[/chat] answer: {answer[:120]}{'...' if len(answer) > 120 else ''} | sources: {len(sources)} | simulations: {len(simulations) if simulations else 0}")
+    return ChatResponse(answer=answer, sources=sources, simulations=simulations)
 
 
 @app.post("/portfolio", response_model=PortfolioResponse)
@@ -75,3 +83,15 @@ def portfolio(req: PortfolioRequest):
     )
     log_success(f"[/portfolio] allocations: {[f'{a.ticker} {a.weight}%' for a in allocations]}")
     return response
+
+
+@app.post("/portfolio/performance", response_model=PerformanceResult)
+def portfolio_performance(req: PerformanceRequest):
+    log_info(f"[/portfolio/performance] riskLevel={req.riskLevel}, tickers={[a['ticker'] for a in req.allocations]}")
+    try:
+        period = period_for_risk(req.riskLevel)
+        result = simulate_portfolio(req.allocations, period)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    log_success(f"[/portfolio/performance] period={result.period}, total_return={result.total_return_pct}%, points={len(result.data_points)}")
+    return result

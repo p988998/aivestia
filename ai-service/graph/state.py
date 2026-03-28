@@ -1,5 +1,5 @@
 import operator
-from typing import Annotated, TypedDict
+from typing import Annotated, Optional, TypedDict
 
 
 class GraphState(TypedDict):
@@ -13,3 +13,4 @@ class GraphState(TypedDict):
     tool_outputs: list
     grounded:     bool
     retry_count:  int
+    simulations:  Optional[list]
