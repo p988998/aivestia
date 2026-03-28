@@ -46,15 +46,25 @@ def get_market_news(ticker: str):
 
 @tool
 def get_stock_price_history(ticker: str, period: str = "1mo") -> str:
-    """Get historical daily closing prices for a stock, ETF, or bond by ticker symbol.
+    """Get historical price summary for a stock, ETF, or bond by ticker symbol.
     Data is sourced from Yahoo Finance. Use this when the user asks about price trends,
     historical performance, or how a security has moved over time (e.g. VTI, AAPL, SPY).
     Valid periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, ytd, max.
     """
     try:
         points = get_price_history(ticker, period=period)
-        lines = "\n".join(f"{p.date}: ${p.close}" for p in points)
-        return f"Historical closing prices for {ticker.upper()} ({period}):\n{lines}"
+        if not points:
+            return f"No price history found for {ticker.upper()} ({period})."
+        start, end = points[0], points[-1]
+        high = max(p.close for p in points)
+        low = min(p.close for p in points)
+        total_pct = (end.close - start.close) / start.close * 100
+        sign = "+" if total_pct >= 0 else ""
+        return (
+            f"{ticker.upper()} ({period}): "
+            f"${start.close:.2f} ({start.date}) → ${end.close:.2f} ({end.date}), "
+            f"{sign}{total_pct:.1f}% total, high ${high:.2f}, low ${low:.2f}"
+        )
     except ValueError as e:
         return str(e)
 
