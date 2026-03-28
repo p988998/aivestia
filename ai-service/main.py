@@ -123,6 +123,12 @@ def create_chat(user_id: str):
     return {"id": chat_id, "title": "New Chat", "updated_at": ""}
 
 
+@app.patch("/chats/{chat_id}/title", status_code=204)
+def update_chat_title(chat_id: str, title: str):
+    with get_conn() as conn:
+        conn.execute("UPDATE chats SET title = %s WHERE id = %s", (title[:60], chat_id))
+
+
 @app.delete("/chats/{chat_id}", status_code=204)
 def delete_chat(chat_id: str):
     with get_conn() as conn:
