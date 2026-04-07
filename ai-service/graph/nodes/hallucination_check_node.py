@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -33,12 +34,19 @@ async def _compress_all(tool_outputs: list[str]) -> str:
     return "\n---\n".join(parts)
 
 
+def _run_async(coro):
+    """Run an async coroutine safely from a sync context (thread pool)."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(asyncio.run, coro)
+        return future.result()
+
+
 def hallucination_check_node(state: GraphState):
     tool_outputs = state.get("tool_outputs", [])
     if not tool_outputs:
         return {"grounded": True}
 
-    compressed = asyncio.run(_compress_all(tool_outputs))
+    compressed = _run_async(_compress_all(tool_outputs))
 
     result = hallucination_grader.invoke(
         {
