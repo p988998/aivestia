@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import uuid
 from contextlib import asynccontextmanager
@@ -28,9 +29,11 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_origins,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
