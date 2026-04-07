@@ -14,28 +14,35 @@ export default function HowItWorksPage() {
     <section className="how-it-works">
       <div className="hiw-header">
         <div className="badge">How it works</div>
-        <h2>Three steps to your AI-powered portfolio.</h2>
+        <h2>Four steps to your AI-powered portfolio.</h2>
       </div>
       <div className="hiw-steps">
         <StepCard
           number="01"
-          title="Set your parameters"
-          desc="Enter your investment amount, risk tolerance (low / medium / high), and time horizon. These inputs drive every decision downstream."
-          detail="Amount · Risk Level · Duration"
+          title="Set up your profile"
+          desc="Tell us your age, risk tolerance, interests, and current holdings."
+          detail="Age · Risk Level · Interests · Holdings"
         />
         <div className="hiw-connector" />
         <StepCard
           number="02"
-          title="Portfolio is generated"
-          desc="A deterministic rule engine maps your risk level to a fixed ETF allocation. No AI is involved at this stage — the logic is transparent and auditable."
-          detail="VTI · VXUS · BND"
+          title="Ask anything"
+          desc="Chat freely about market trends, investment strategies, or specific assets."
+          detail="Market Data · News · RAG"
         />
         <div className="hiw-connector" />
         <StepCard
           number="03"
-          title="Agent reasons with live context"
-          desc="A LangGraph ReAct agent autonomously fetches market data and news via Yahoo Finance, retrieves relevant context from a FAISS vector store (RAG), then generates a plain-language explanation and rebalancing suggestion."
-          detail="LangGraph · RAG · FAISS · GPT-4o"
+          title="Get your portfolio"
+          desc="Receive a personalized ETF allocation grounded in real data and investment strategy."
+          detail="Rule-based · GPT-4o · Strategy"
+        />
+        <div className="hiw-connector" />
+        <StepCard
+          number="04"
+          title="See the simulation"
+          desc="Compare your recommended portfolio vs. current holdings with historical performance charts."
+          detail="Historical Simulation · Performance"
         />
       </div>
     </section>

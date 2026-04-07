@@ -7,7 +7,10 @@ import AboutPage from './pages/AboutPage'
 import ChatPage from './pages/ChatPage'
 
 export default function App() {
-  const [page, setPage] = useState('home')
+  const [page, setPage] = useState(() => {
+    const p = window.history.state?.page
+    return p || 'home'
+  })
   const [userId] = useState(() => {
     let id = localStorage.getItem('aivestia_user_id')
     if (!id) {
@@ -21,24 +24,36 @@ export default function App() {
     fetch(`${API}/users?user_id=${userId}`, { method: 'POST' }).catch(() => {})
   }, [userId])
 
+  useEffect(() => {
+    const onPopState = (e) => {
+      setPage(e.state?.page || 'home')
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  const navigate = (newPage) => {
+    window.history.pushState({ page: newPage }, '', `#${newPage}`)
+    setPage(newPage)
+  }
+
   return (
     <div className="app">
       <header className="header">
-        <div className="logo" onClick={() => setPage('home')} style={{ cursor: 'pointer' }}>
+        <div className="logo" onClick={() => navigate('home')} style={{ cursor: 'pointer' }}>
           <span className="logo-icon">◈</span>
           <span className="logo-text">Aivestia</span>
         </div>
         <nav className="nav">
-          <a href="#" className={page === 'how-it-works' ? 'nav-active' : ''} onClick={e => { e.preventDefault(); setPage('how-it-works') }}>How it works</a>
-          <a href="#" className={page === 'about' ? 'nav-active' : ''} onClick={e => { e.preventDefault(); setPage('about') }}>About</a>
-          <button className="btn-primary" onClick={() => setPage('chat')}>Get Started</button>
+          <a href="#" className={page === 'how-it-works' ? 'nav-active' : ''} onClick={e => { e.preventDefault(); navigate('how-it-works') }}>How it works</a>
+          <a href="#" className={page === 'about' ? 'nav-active' : ''} onClick={e => { e.preventDefault(); navigate('about') }}>About</a>
         </nav>
       </header>
 
-      {page === 'home'         && <HomePage onNavigate={setPage} />}
+      {page === 'home'         && <HomePage onNavigate={navigate} />}
       {page === 'how-it-works' && <HowItWorksPage />}
       {page === 'about'        && <AboutPage />}
-      {page === 'chat'         && <ChatPage onBack={() => setPage('home')} userId={userId} />}
+      {page === 'chat'         && <ChatPage onBack={() => navigate('home')} userId={userId} />}
     </div>
   )
 }

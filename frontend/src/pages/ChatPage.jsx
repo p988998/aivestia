@@ -275,7 +275,10 @@ export default function ChatPage({ onBack, userId }) {
         <div className="chat-header">
           <div className="chat-tabs">
             <button className={`tab ${mode === 'chat' ? 'tab-active' : ''}`} onClick={() => setMode('chat')}>Chat</button>
-            <button className={`tab ${mode === 'portfolio' ? 'tab-active' : ''}`} onClick={() => setMode('portfolio')}>My Profile</button>
+            <button className={`tab ${mode === 'portfolio' ? 'tab-active' : ''}`} onClick={() => setMode('portfolio')}>
+              My Profile
+              {!portfolioContext && <span className="tab-badge">Set up</span>}
+            </button>
           </div>
           <div className="chat-status"><span className="status-dot" />AI ready</div>
         </div>
@@ -335,7 +338,7 @@ export default function ChatPage({ onBack, userId }) {
           </>
         )}
 
-        {mode === 'portfolio' && <PortfolioForm onSaveForChat={handleSaveForChat} savedProfile={portfolioContext} />}
+        {mode === 'portfolio' && <PortfolioForm onSaveForChat={handleSaveForChat} onClear={() => setPortfolioContext(null)} savedProfile={portfolioContext} />}
       </div>
     </div>
   )

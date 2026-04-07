@@ -559,7 +559,7 @@
 }
 
 .hero-content {
-  max-width: 520px;
+  flex: 0 0 35%;
 }
 
 .badge {
@@ -709,6 +709,70 @@
   color: #fbbf24;
 }
 
+/* ── Bottom Section ── */
+.bottom-section {
+  display: flex;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+/* ── How Steps ── */
+.how-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 32px;
+}
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  padding-bottom: 20px;
+}
+.step:last-child {
+  padding-bottom: 0;
+}
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6366f1;
+  margin-top: 5px;
+}
+.step-line {
+  width: 1px;
+  flex: 1;
+  min-height: 24px;
+  background: rgba(99,102,241,0.25);
+  margin-top: 4px;
+}
+.step:last-child .step-line {
+  display: none;
+}
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.step-num {
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.step-text {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
 /* ── Features ── */
 .features {
   display: flex;
@@ -768,7 +832,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0;
-  max-width: 960px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -789,7 +853,7 @@
 }
 
 .step-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   color: #f1f5f9;
   margin: 0 0 12px;
@@ -797,17 +861,18 @@
 
 .step-desc {
   font-size: 14px;
-  color: #64748b;
+  color: #94a3b8;
   line-height: 1.7;
   margin: 0 0 20px;
 }
 
 .step-detail {
   font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-  letter-spacing: 0.5px;
-  background: rgba(255,255,255,0.04);
+  font-weight: 500;
+  color: #818cf8;
+  letter-spacing: 0.3px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
   border-radius: 6px;
   padding: 6px 10px;
   display: inline-block;
@@ -907,7 +972,7 @@
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  width: 52px;
+  min-width: 90px;
   flex-shrink: 0;
 }
 
@@ -915,6 +980,8 @@
   font-size: 13px;
   color: #64748b;
   line-height: 1.5;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .arch-flow {
@@ -986,6 +1053,24 @@
 .tab-active {
   background: #6366f1;
   color: #fff;
+}
+
+.tab-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 100px;
+  background: #f59e0b;
+  color: #000;
+  vertical-align: middle;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 /* ── Portfolio Form ── */
@@ -1396,6 +1481,48 @@
 .simulation-group .simulation-card {
   margin-top: 0;
   flex: 1 1 320px;
+}
+
+/* ── Demo Window ── */
+.demo-window {
+  background: #13131a;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 20px 24px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 0 0 60%;
+  min-width: 0;
+}
+.demo-label {
+  display: inline-block;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 100px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  align-self: flex-start;
+}
+.demo-window .bubble {
+  font-size: 13px;
+  padding: 10px 14px;
+}
+.demo-window .simulation-card {
+  max-width: 100%;
+  margin-top: 4px;
+}
+.demo-window .simulation-group {
+  margin-top: 4px;
+  flex-wrap: nowrap;
+}
+.demo-window .simulation-group .simulation-card {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /* ── Simulation Card ── */

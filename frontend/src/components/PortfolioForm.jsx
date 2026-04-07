@@ -11,10 +11,10 @@ const INTERESTS = [
   { label: 'Small & Mid Cap',       tooltip: 'Smaller companies with higher growth potential and more volatility (e.g. VB)' },
 ]
 
-export default function PortfolioForm({ onSaveForChat, savedProfile }) {
+export default function PortfolioForm({ onSaveForChat, onClear, savedProfile }) {
   const [form, setForm] = useState({
     age: savedProfile?.age ?? '',
-    riskLevel: savedProfile?.riskLevel ?? 'medium',
+    riskLevel: savedProfile?.riskLevel ?? '',
     horizon: savedProfile?.horizon ?? '',
     interests: savedProfile?.interests ?? [],
     holdings: savedProfile?.holdings ?? [],
@@ -59,10 +59,11 @@ export default function PortfolioForm({ onSaveForChat, savedProfile }) {
   }
 
   function handleClear() {
-    setForm({ age: '', riskLevel: 'medium', horizon: '', interests: [], holdings: [] })
+    setForm({ age: '', riskLevel: '', horizon: '', interests: [], holdings: [] })
+    onClear?.()
   }
 
-  const canSave = form.age && form.horizon
+  const canSave = form.age && form.horizon && form.riskLevel
   const hasContent = form.age || form.horizon || form.interests.length > 0 || form.holdings.length > 0
 
   return (

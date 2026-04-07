@@ -29,9 +29,11 @@ export default function AboutPage() {
           <div className="stack-section">
             <div className="stack-label">Tech Stack</div>
             <div className="stack-list">
-              <StackItem lang="Java" detail="Spring Boot 3 · REST API · Business logic & orchestration" color="#f89820" />
-              <StackItem lang="Python" detail="FastAPI · LangGraph · LangChain · OpenAI LLM · RAG · FAISS" color="#3b82f6" />
-              <StackItem lang="React" detail="Vite · UI display only · No business logic" color="#61dafb" />
+              <StackItem lang="Python" detail="FastAPI · LangGraph · LangChain · OpenAI GPT-4o / GPT-4o-mini" color="#3b82f6" />
+              <StackItem lang="React" detail="Vite · Recharts · SSE streaming" color="#61dafb" />
+              <StackItem lang="PostgreSQL" detail="Chat history · Conversation state persistence · psycopg3" color="#336791" />
+              <StackItem lang="Pinecone" detail="Vector store · RAG pipeline · text-embedding-3-small" color="#22c55e" />
+              <StackItem lang="AWS" detail="Planned deployment · EC2 / RDS / S3" color="#f59e0b" />
             </div>
           </div>
 
@@ -40,15 +42,17 @@ export default function AboutPage() {
             <div className="arch-flow">
               <span className="arch-node">React</span>
               <span className="arch-arrow">→</span>
-              <span className="arch-node">Spring Boot</span>
-              <span className="arch-arrow">→</span>
               <span className="arch-node">FastAPI</span>
               <span className="arch-arrow">→</span>
-              <span className="arch-node">LangGraph Agent</span>
+              <span className="arch-node">LangGraph</span>
               <span className="arch-arrow">→</span>
-              <span className="arch-node">GPT-4o</span>
+              <span className="arch-node">Chat / Portfolio Agent</span>
+              <span className="arch-arrow">→</span>
+              <span className="arch-node">Final LLM</span>
             </div>
-            <p className="arch-note">Portfolio allocation is fully deterministic (Java). The LangGraph agent autonomously calls tools — <strong>get_market_data</strong>, <strong>get_recent_news</strong>, <strong>search_financial_context</strong> (RAG) — before generating its final explanation.</p>
+            <p className="arch-note">
+              Portfolio allocation is fully deterministic — no AI involvement in investment decisions. The LangGraph agent autonomously calls tools (<strong>market data</strong>, <strong>news</strong>, <strong>RAG retrieval</strong>, <strong>portfolio simulation</strong>), then a hallucination check validates the answer before the final LLM generates a polished response.
+            </p>
           </div>
         </div>
       </div>
