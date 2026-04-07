@@ -64,7 +64,7 @@ export default function PortfolioForm({ onSaveForChat, onClear, savedProfile }) 
   }
 
   const canSave = form.age && form.horizon && form.riskLevel
-  const hasContent = form.age || form.horizon || form.interests.length > 0 || form.holdings.length > 0
+  const hasContent = form.age || form.riskLevel || form.horizon || form.interests.length > 0 || form.holdings.length > 0
 
   return (
     <div className="portfolio-form-wrap">

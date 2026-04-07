@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import { API } from './api'
 import HomePage from './pages/HomePage'
@@ -32,10 +32,10 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
-  const navigate = (newPage) => {
+  const navigate = useCallback((newPage) => {
     window.history.pushState({ page: newPage }, '', `#${newPage}`)
     setPage(newPage)
-  }
+  }, [])
 
   return (
     <div className="app">

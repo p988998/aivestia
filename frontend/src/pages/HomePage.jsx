@@ -10,6 +10,13 @@ function FeatureCard({ icon, title, desc }) {
   )
 }
 
+const STEPS = [
+  "Set up your profile — age, risk level, interests & holdings",
+  "Ask anything investment-related — market trends, strategies, specific assets",
+  "Get a portfolio grounded in real data & investment strategy",
+  "See how it would have performed — with historical simulation",
+]
+
 const DEMO_HOLDINGS_SIM = {
   label: "Your Current Holdings",
   allocations: [
@@ -79,22 +86,18 @@ export default function HomePage({ onNavigate }) {
             <button className="btn-primary btn-lg" onClick={() => onNavigate('chat')}>Meet Your AI Financial Advisor</button>
           </div>
           <div className="how-steps">
-            <div className="step">
-              <div className="step-indicator"><div className="step-dot" /><div className="step-line" /></div>
-              <div className="step-body"><span className="step-num">Step 1</span><span className="step-text">Set up your profile — age, risk level, interests &amp; holdings</span></div>
-            </div>
-            <div className="step">
-              <div className="step-indicator"><div className="step-dot" /><div className="step-line" /></div>
-              <div className="step-body"><span className="step-num">Step 2</span><span className="step-text">Ask anything investment-related — market trends, strategies, specific assets</span></div>
-            </div>
-            <div className="step">
-              <div className="step-indicator"><div className="step-dot" /><div className="step-line" /></div>
-              <div className="step-body"><span className="step-num">Step 3</span><span className="step-text">Get a portfolio grounded in real data &amp; investment strategy</span></div>
-            </div>
-            <div className="step">
-              <div className="step-indicator"><div className="step-dot" /></div>
-              <div className="step-body"><span className="step-num">Step 4</span><span className="step-text">See how it would have performed — with historical simulation</span></div>
-            </div>
+            {STEPS.map((text, i) => (
+              <div className="step" key={i}>
+                <div className="step-indicator">
+                  <div className="step-dot" />
+                  {i < STEPS.length - 1 && <div className="step-line" />}
+                </div>
+                <div className="step-body">
+                  <span className="step-num">Step {i + 1}</span>
+                  <span className="step-text">{text}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
