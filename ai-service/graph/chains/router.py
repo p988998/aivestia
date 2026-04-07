@@ -1,5 +1,6 @@
 from typing import Literal
 
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
@@ -15,7 +16,7 @@ class RouteQuery(BaseModel):
 
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-structured_llm_router = llm.with_structured_output(RouteQuery)
+_parser = PydanticOutputParser(pydantic_object=RouteQuery)
 
 system = """You are an expert router that assigns a user query to the correct agent.
 
@@ -62,9 +63,9 @@ Q: What are the risks of investing in bonds? → chat_agent"""
 
 route_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", system),
+        ("system", system + "\n\n{format_instructions}"),
         ("human", "{question}"),
     ]
-)
+).partial(format_instructions=_parser.get_format_instructions())
 
-question_router = route_prompt | structured_llm_router
+question_router = route_prompt | llm | _parser

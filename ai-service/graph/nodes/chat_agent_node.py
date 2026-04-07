@@ -1,5 +1,6 @@
 from agents.chat_agent import run as chat_agent_run
 from graph.state import GraphState
+from langchain_core.runnables import RunnableConfig
 
 
 def _build_profile_message(user_profile: dict) -> dict | None:
@@ -16,16 +17,17 @@ def _build_profile_message(user_profile: dict) -> dict | None:
     return {"role": "system", "content": profile_text}
 
 
-def chat_agent_node(state: GraphState) -> GraphState:
+def chat_agent_node(state: GraphState, config: RunnableConfig) -> GraphState:
     history = state.get("history", [])
     profile_msg = _build_profile_message(state.get("user_profile", {}))
     messages = ([profile_msg] if profile_msg else []) + history + [{"role": "user", "content": state["question"]}]
-    result = chat_agent_run(messages)
+    result = chat_agent_run(messages, config=config)
     return {
         "answer":       result["answer"],
         "context":      result.get("context", []),
         "news_urls":    result.get("news_urls", []),
         "tool_outputs": result.get("tool_outputs", []),
+        "simulations":  None,
         "retry_count":  0,
         "history":      [
             {"role": "user",      "content": state["question"]},

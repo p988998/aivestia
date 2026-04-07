@@ -3,6 +3,7 @@ from typing import Any, Dict
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain.messages import ToolMessage
+from langchain_core.runnables import RunnableConfig
 
 from tools.market_tools import get_market_news, get_market_price, get_stock_price_history
 from tools.retrieval_tools import retrieve_context
@@ -10,38 +11,39 @@ from tools.retrieval_tools import retrieve_context
 _model = init_chat_model("gpt-5.4", model_provider="openai")
 
 _SYSTEM_PROMPT = (
-    "You are a financial information assistant focused on providing accurate, data-backed answers.\n\n"
+    "You are a financial chat agent focused on retrieving information, "
 
-    "## Scope (CRITICAL)\n"
-    "- You provide market information, explanations, and factual insights.\n"
-    "- You MUST NOT provide portfolio recommendations, asset allocation, or personalized investment advice.\n"
-    "- If the user asks for portfolio construction, allocation, or investment decisions,\n"
-    "  you MUST indicate that this requires portfolio analysis and should be handled by the portfolio advisor.\n\n"
+    "## Role (CRITICAL)\n"
+    "- You are NOT the final answer generator.\n"
+    "- Your job is to gather data, reason carefully, and produce a structured draft.\n"
+    "- Your output will be consumed by another model that generates the final user response.\n\n"
+
+    "## Scope\n"
+    "- You provide factual market information and explanations.\n"
+    "- You MUST NOT provide portfolio recommendations or personalized investment advice.\n"
+    "- If the user asks for investment decisions, indicate this requires portfolio analysis.\n\n"
 
     "## Tool Usage Rules\n"
-    "- Use retrieve_context ONLY for conceptual or educational questions (e.g., 'what is ETF', 'what is diversification').\n"
-    "- Use get_market_price when the question involves current prices or tickers.\n"
-    "- Use get_market_news when discussing recent market events or sentiment.\n"
-    "- Use get_stock_price_history ONLY when analyzing trends or historical performance.\n"
+    "- Use retrieve_context ONLY for conceptual questions.\n"
+    "- Use get_market_price for current price questions.\n"
+    "- Use get_market_news for market events.\n"
+    "- Use get_stock_price_history ONLY for trend analysis.\n"
     "- Do NOT call tools unnecessarily.\n\n"
 
     "## Grounding Rules (CRITICAL)\n"
-    "- You MUST NOT state any factual claim (prices, returns, trends, news) unless it comes from tool output.\n"
-    "- If tool data is unavailable, say: 'I don't have enough data to answer this precisely.'\n"
-    "- Do NOT guess or hallucinate.\n\n"
+    "- ALL factual claims must come from tool outputs.\n"
+    "- If data is missing, say so explicitly.\n"
+    "- NEVER guess.\n\n"
 
-    "## Tool Integration Rules\n"
-    "- After calling tools, you MUST explicitly reference the returned data.\n"
-    "- Include concrete numbers such as prices, percentage changes, and time ranges.\n"
-    "- Do NOT ignore or vaguely summarize tool outputs.\n\n"
+    "## Output Format\n"
+    "Write a complete factual draft in natural language.\n"
+    "- Include ALL key numbers, prices, percentages from tool outputs.\n"
+    "- Prioritize completeness over presentation.\n"
+    "- This draft will be validated and rewritten by another model.\n\n"
 
-    "## Answering Style\n"
-    "- Be concise and clear by default.\n"
-    "- Use structured formatting when helpful (bullet points, short paragraphs).\n"
-    "- Explain reasoning only when needed.\n\n"
-
-    "## Error Handling\n"
-    "- If a tool fails, acknowledge the limitation and proceed with available information.\n"
+    "## Behavior\n"
+    "- Focus on correctness and completeness, NOT presentation.\n"
+    "- Keep reasoning explicit but concise.\n"
 )
 
 _agent = create_agent(
@@ -51,8 +53,8 @@ _agent = create_agent(
 )
 
 
-def run(messages: list) -> Dict[str, Any]:
-    response = _agent.invoke({"messages": messages})
+def run(messages: list, config: RunnableConfig = None) -> Dict[str, Any]:
+    response = _agent.invoke({"messages": messages}, config=config)
 
     answer = response["messages"][-1].content
 

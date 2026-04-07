@@ -20,6 +20,8 @@ export default function ChatPage({ onBack, userId }) {
   const [messages, setMessages] = useState([WELCOME_MESSAGE])
   const [input, setInput] = useState('')
   const [loadingChatId, setLoadingChatId] = useState(null)
+  const [streamingChatId, setStreamingChatId] = useState(null)
+  const [statusMessage, setStatusMessage] = useState('')
   const [portfolioContext, setPortfolioContext] = useState(null)
   const [suggestions, setSuggestions] = useState([])
   const [editingChatId, setEditingChatId] = useState(null)
@@ -137,30 +139,100 @@ export default function ChatPage({ onBack, userId }) {
   async function handleSend(overrideText) {
     const text = (overrideText !== undefined ? overrideText : input).trim()
     const chatId = activeChatId
-    if (!text || loadingChatId || !chatId) return
+    if (!text || streamingChatId || loadingChatId || !chatId) return
+
     setInput('')
     setSuggestions([])
     setMessages(prev => [...prev, { role: 'user', content: text, sources: [] }])
     setLoadingChatId(chatId)
+    setStreamingChatId(chatId)
+    setStatusMessage('')
+
     try {
-      const res = await fetch(`${API}/chat`, {
+      const res = await fetch(`${API}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, chat_id: chatId, user_id: userId, user_profile: portfolioContext ?? {} }),
       })
-      if (!res.ok) throw new Error('error')
-      const data = await res.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.answer, sources: data.sources || [], simulations: data.simulations || null }])
-      setChats(prev => prev.map(c =>
-        c.id === chatId && c.title === 'New Chat'
-          ? { ...c, title: text.slice(0, 40) }
-          : c
-      ))
-      fetchSuggestions(data.answer)
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let firstToken = true
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop()
+
+        for (const part of parts) {
+          const lines = part.split('\n')
+          let eventType = 'message'
+          let dataStr = ''
+          for (const line of lines) {
+            if (line.startsWith('event: ')) eventType = line.slice(7).trim()
+            if (line.startsWith('data: '))  dataStr  = line.slice(6).trim()
+          }
+          if (!dataStr) continue
+          const data = JSON.parse(dataStr)
+
+          if (eventType === 'status') {
+            setStatusMessage(data.message)
+          } else if (eventType === 'retry') {
+            setStatusMessage('Refining answer...')
+          } else if (eventType === 'token') {
+            if (firstToken) {
+              setMessages(prev => [...prev, { role: 'assistant', content: '', sources: [] }])
+              setLoadingChatId(null)
+              setStatusMessage('')
+              firstToken = false
+            }
+            setMessages(prev => {
+              const msgs = [...prev]
+              const last = msgs[msgs.length - 1]
+              return [...msgs.slice(0, -1), { ...last, content: last.content + data }]
+            })
+          } else if (eventType === 'done') {
+            setMessages(prev => {
+              const msgs = [...prev]
+              const last = msgs[msgs.length - 1]
+              const assistantMsg = {
+                role: 'assistant',
+                content: data.answer,
+                sources: data.sources || [],
+                simulations: data.simulations || null,
+              }
+              // token events already added an assistant message → update it
+              // no token events → last is still user message → append assistant message
+              if (last.role === 'assistant') {
+                return [...msgs.slice(0, -1), { ...last, ...assistantMsg }]
+              }
+              return [...msgs, assistantMsg]
+            })
+            setLoadingChatId(null)
+            setStreamingChatId(null)
+            setChats(prev => prev.map(c =>
+              c.id === chatId && c.title === 'New Chat'
+                ? { ...c, title: text.slice(0, 40) }
+                : c
+            ))
+            fetchSuggestions(data.answer)
+          }
+        }
+      }
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, the AI service is unavailable. Please make sure it is running on port 8000.', sources: [] }])
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, the AI service is unavailable. Please make sure it is running on port 8000.',
+        sources: [],
+      }])
     } finally {
       setLoadingChatId(null)
+      setStreamingChatId(null)
+      setStatusMessage('')
     }
   }
 
@@ -219,7 +291,11 @@ export default function ChatPage({ onBack, userId }) {
                       {msg.role === 'assistant' && <div className="avatar">◈</div>}
                       <div className="bubble-content">
                         <div className={`bubble ${msg.role}`} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
-                        {msg.simulations?.map((sim, i) => <SimulationCard key={i} simulation={sim} />)}
+                        {msg.simulations?.length > 0 && (
+                          <div className="simulation-group">
+                            {msg.simulations.map((sim, i) => <SimulationCard key={i} simulation={sim} />)}
+                          </div>
+                        )}
                         {msg.sources?.length > 0 && <SourcesPanel sources={msg.sources} />}
                       </div>
                     </div>
@@ -228,8 +304,9 @@ export default function ChatPage({ onBack, userId }) {
               {loadingChatId === activeChatId && (
                 <div className="bubble-wrap assistant">
                   <div className="avatar">◈</div>
-                  <div className="bubble assistant typing">
+                  <div className="bubble assistant typing-status">
                     <span /><span /><span />
+                    {statusMessage && <span className="status-label">{statusMessage}</span>}
                   </div>
                 </div>
               )}
@@ -239,7 +316,7 @@ export default function ChatPage({ onBack, userId }) {
             <SuggestionBar
               suggestions={suggestions}
               isEmptyState={messages.length === 1 && messages[0].role === 'assistant'}
-              visible={!loadingChatId}
+              visible={!loadingChatId && !streamingChatId}
               onSelect={(text) => handleSend(text)}
             />
             <div className="chat-input-bar">
@@ -251,7 +328,7 @@ export default function ChatPage({ onBack, userId }) {
                 onKeyDown={handleKeyDown}
                 rows={1}
               />
-              <button className="chat-send" onClick={handleSend} disabled={!input.trim() || !!loadingChatId}>
+              <button className="chat-send" onClick={handleSend} disabled={!input.trim() || !!loadingChatId || !!streamingChatId}>
                 Send →
               </button>
             </div>

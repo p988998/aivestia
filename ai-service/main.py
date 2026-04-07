@@ -5,9 +5,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from core import run_llm, set_langgraph_app
+from core import run_llm, set_langgraph_app, stream_llm
 from database import DATABASE_URL, get_conn, init_db
 from graph.graph import build_graph
 from services.performance_service import PerformanceResult, period_for_risk, simulate_portfolio
@@ -217,7 +218,63 @@ Response:
         return SuggestionsResponse(suggestions=fallback)
 
 
-# ---------- Chat (LLM) endpoint ----------
+# ---------- Chat (LLM) endpoints ----------
+
+@app.post("/chat/stream")
+def chat_stream(req: ChatRequest):
+    def generate():
+        final_vals = {}
+        try:
+            for event_type, data in stream_llm(req.message, req.chat_id, req.user_profile):
+                if event_type == "status":
+                    yield f"event: status\ndata: {json.dumps({'message': data})}\n\n"
+                elif event_type == "retry":
+                    yield f"event: retry\ndata: {json.dumps({'reason': data})}\n\n"
+                elif event_type == "token":
+                    yield f"event: token\ndata: {json.dumps(data)}\n\n"
+                elif event_type == "done":
+                    final_vals = data
+        except Exception:
+            yield f"event: token\ndata: {json.dumps('Sorry, the AI service is unavailable.')}\n\n"
+
+        answer = _strip_source_suffix(final_vals.get("answer", ""))
+        raw_sources = [
+            str(doc.metadata.get("source") or "Unknown")
+            for doc in (final_vals.get("context") or [])
+            if getattr(doc, "metadata", None) is not None
+        ] + (final_vals.get("news_urls") or [])
+        sources = list(dict.fromkeys(raw_sources))
+        simulations = final_vals.get("simulations") or None
+
+        with get_conn() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM messages WHERE chat_id = %s", (req.chat_id,)
+            ).fetchone()
+            is_first = row["cnt"] == 0
+            conn.execute(
+                "INSERT INTO messages (chat_id, role, content, sources, simulations) VALUES (%s,%s,%s,%s,%s)",
+                (req.chat_id, "user", req.message, json.dumps([]), None),
+            )
+            conn.execute(
+                "INSERT INTO messages (chat_id, role, content, sources, simulations) VALUES (%s,%s,%s,%s,%s)",
+                (req.chat_id, "assistant", answer, json.dumps(sources), json.dumps(simulations) if simulations else None),
+            )
+            if is_first:
+                conn.execute(
+                    "UPDATE chats SET title = %s, updated_at = NOW() WHERE id = %s",
+                    (req.message[:40], req.chat_id),
+                )
+            else:
+                conn.execute("UPDATE chats SET updated_at = NOW() WHERE id = %s", (req.chat_id,))
+
+        yield f"event: done\ndata: {json.dumps({'sources': sources, 'simulations': simulations, 'answer': answer})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):

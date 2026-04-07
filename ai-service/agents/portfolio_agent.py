@@ -3,36 +3,49 @@ from typing import Any, Dict
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain.messages import ToolMessage
+from langchain_core.runnables import RunnableConfig
 from tools.market_tools import get_market_news, get_market_price, get_stock_price_history
 from tools.portfolio_tools import get_portfolio_simulation, get_rule_based_allocation, simulate_holdings
 from tools.retrieval_tools import retrieve_context
 
 _model = init_chat_model("gpt-5.4", model_provider="openai")
 
-_SYSTEM_PROMPT = """
-You are a portfolio advisor AI that provides personalized investment recommendations.
+_SYSTEM_PROMPT = (
+    "You are a portfolio reasoning agent.\n\n"
 
-Tool usage rules:
-- For any investment-related claim, you MUST use tools to retrieve supporting data before stating it.
-- Use get_market_price and get_market_news for every asset you discuss — including tickers from the rule engine, not only ones the user mentions.
-- Use get_stock_price_history for trend or performance claims.
-- Use retrieve_context for investment theory, strategy, or principles.
-- Use get_portfolio_simulation when giving a concrete recommendation — it returns allocation + historical simulation for the user to see.
-- Use get_rule_based_allocation only when you need allocation data internally, without showing a simulation.
-- If the user has current holdings, call simulate_holdings(holdings_csv, risk_level) FIRST (format: 'VTI:60,BND:40'), then call get_portfolio_simulation. This generates a side-by-side comparison.
+    "## Role (CRITICAL)\n"
+    "- You are NOT the final answer generator.\n"
+    "- Your job is to construct a data-backed investment analysis and draft recommendation.\n"
+    "- Another model will generate the final user-facing answer.\n\n"
 
-Response requirements:
-- After calling tools, explicitly incorporate their outputs in your answer.
-- Quote specific headlines, name retrieved principles, cite exact prices and percentages.
-- Do not write generic answers that ignore tool results.
-- Clearly explain your reasoning.
+    "## Responsibilities\n"
+    "- Analyze user risk profile and preferences.\n"
+    "- Generate allocation and reasoning.\n"
+    "- Compare current holdings if provided.\n"
+    "- Identify trade-offs (return vs risk vs diversification).\n\n"
 
-Behavior:
-- If the user provides current holdings, compare their portfolio with the recommended one.
-- If not, give a recommendation based on their risk profile and encourage them to share holdings.
-- If the recommended portfolio shows lower historical returns than the user's current holdings, acknowledge this honestly and explain the trade-offs: risk alignment, volatility, diversification, or concentration risk. Never hide unfavorable data or recommend a clearly worse portfolio without justification.
-- If a tool fails, acknowledge the limitation and proceed with available information.
-"""
+    "## Tool Usage Rules\n"
+    "- ALWAYS use get_portfolio_simulation for recommendations.\n"
+    "- Use simulate_holdings FIRST if user provides current portfolio.\n"
+    "- Use get_market_price and get_market_news for discussed assets.\n"
+    "- Use get_stock_price_history for performance claims.\n"
+    "- Use retrieve_context for investment principles.\n\n"
+
+    "## Grounding Rules (CRITICAL)\n"
+    "- ALL claims must be backed by tool outputs.\n"
+    "- NEVER invent returns, prices, or results.\n\n"
+
+    "## Output Format\n"
+    "Write a complete factual draft in natural language.\n"
+    "- Include ALL key numbers, prices, percentages from tool outputs.\n"
+    "- Prioritize completeness over presentation.\n"
+    "- This draft will be validated and rewritten by another model.\n\n"
+
+    "## Behavior\n"
+    "- Be precise, data-driven, and explicit.\n"
+    "- Do NOT optimize for user readability — optimize for correctness.\n"
+    "- If the recommended portfolio shows lower returns than user's holdings, include this honestly.\n"
+)
 
 _agent = create_agent(
     _model,
@@ -42,8 +55,10 @@ _agent = create_agent(
 )
 
 
-def run(messages: list, user_profile: dict = {}) -> Dict[str, Any]:
+def run(messages: list, user_profile: dict = {}, config: RunnableConfig = None) -> Dict[str, Any]:
     full_messages = []
+    valid_holdings = []
+
     if user_profile:
         interests = user_profile.get("interests") or []
         interests_text = f", interests: {', '.join(interests)}" if interests else ""
@@ -60,19 +75,20 @@ def run(messages: list, user_profile: dict = {}) -> Dict[str, Any]:
             f"{interests_text}.{holdings_text}"
         )
         full_messages.append({"role": "system", "content": profile_text})
+
     full_messages += messages
-    response = _agent.invoke({"messages": full_messages})
+    response = _agent.invoke({"messages": full_messages}, config=config)
 
     answer = response["messages"][-1].content
 
     context_docs = []
-    simulations = []
+    agent_simulations = []
     for message in response["messages"]:
         if not (isinstance(message, ToolMessage) and hasattr(message, "artifact")):
             continue
         artifact = message.artifact
         if isinstance(artifact, dict) and "performance" in artifact:
-            simulations.append(artifact)
+            agent_simulations.append(artifact)
         elif isinstance(artifact, list):
             for item in artifact:
                 if not isinstance(item, str):
@@ -83,5 +99,20 @@ def run(messages: list, user_profile: dict = {}) -> Dict[str, Any]:
         for message in response["messages"]
         if isinstance(message, ToolMessage)
     ]
+
+    # Only simulate current holdings when agent produced a recommendation
+    simulations = []
+    has_recommendation = any(s.get("label") == "Recommended Portfolio" for s in agent_simulations)
+    if has_recommendation and valid_holdings:
+        holdings_csv = ",".join(f"{h['ticker']}:{h['weight']}" for h in valid_holdings)
+        risk_level = user_profile.get("riskLevel", "medium")
+        result = simulate_holdings.invoke(
+            {"holdings_csv": holdings_csv, "risk_level": risk_level}
+        )
+        holdings_artifact = getattr(result, "artifact", {})
+        if isinstance(holdings_artifact, dict) and "performance" in holdings_artifact:
+            simulations.append(holdings_artifact)  # current holdings first (left card)
+
+    simulations.extend(agent_simulations)  # recommended portfolio second (right card)
 
     return {"answer": answer, "context": context_docs, "tool_outputs": tool_outputs, "simulations": simulations or None}
