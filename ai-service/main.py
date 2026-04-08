@@ -27,7 +27,13 @@ async def lifespan(_: FastAPI):
         yield
 
 
-app = FastAPI(lifespan=lifespan)
+ENV = os.getenv("ENV")
+
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/docs" if ENV == "dev" else None,
+    redoc_url="/redoc" if ENV == "dev" else None,
+)
 
 _origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,https://aivestia.vercel.app").split(",")
 
