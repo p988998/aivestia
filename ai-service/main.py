@@ -38,7 +38,7 @@ app = FastAPI(
     redoc_url="/redoc" if ENV == "dev" else None,
 )
 
-_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,https://aivestia.vercel.app").split(",")
+_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,https://aivestia.vercel.app,https://www.aivestia.xyz").split(",")
 
 app.add_middleware(
     CORSMiddleware,
