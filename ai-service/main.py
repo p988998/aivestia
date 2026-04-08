@@ -123,7 +123,6 @@ def _strip_source_suffix(text: str) -> str:
 @app.post("/users", status_code=201)
 def create_user(user_id: str, request: Request):
     ip = request.headers.get("x-real-ip", request.client.host)
-    log_info(f"[/users] user={user_id} ip={ip}")
     with get_conn() as conn:
         conn.execute(
             "INSERT INTO users (id, ip) VALUES (%s, %s) ON CONFLICT (id) DO UPDATE SET ip = EXCLUDED.ip",
