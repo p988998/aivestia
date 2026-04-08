@@ -931,6 +931,19 @@
   font-size: 13px;
 }
 
+.about-contact {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+.about-contact a {
+  color: #818cf8;
+  text-decoration: none;
+}
+.about-contact a:hover {
+  text-decoration: underline;
+}
+
 .about-right {
   flex: 1;
   display: flex;
