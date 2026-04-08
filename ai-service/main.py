@@ -199,6 +199,8 @@ Requirements:
 - 5-10 words each
 - Specific and actionable
 - Investment-related
+- Written from the user's perspective, as if the user is asking (e.g. "How does this compare to...?")
+- Do NOT write from the assistant's perspective (avoid "I can explain...", "Let me show...")
 
 Return JSON:
 {{
