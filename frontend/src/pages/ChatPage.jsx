@@ -331,7 +331,7 @@ export default function ChatPage({ onBack, userId }) {
                 onKeyDown={handleKeyDown}
                 rows={1}
               />
-              <button className="chat-send" onClick={handleSend} disabled={!input.trim() || !!loadingChatId || !!streamingChatId}>
+              <button className="chat-send" onClick={() => handleSend()} disabled={!input.trim() || !!loadingChatId || !!streamingChatId}>
                 Send →
               </button>
             </div>

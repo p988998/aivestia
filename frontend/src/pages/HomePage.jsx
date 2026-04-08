@@ -128,7 +128,7 @@ export default function HomePage({ onNavigate }) {
           <div className="bubble-wrap user">
             <div className="bubble-content">
               <div className="bubble user">
-                I&apos;m 30, medium risk. I hold AAPL &amp; TSLA. What do you recommend?
+              I'm 30, medium risk. I hold a mix of bonds and real estate ETFs. What do you recommend?
               </div>
             </div>
             <div className="avatar">U</div>
@@ -137,7 +137,8 @@ export default function HomePage({ onNavigate }) {
             <div className="avatar">A</div>
             <div className="bubble-content">
               <div className="bubble assistant">
-                Your holdings are concentrated in tech. Here&apos;s how a diversified ETF portfolio compares historically:
+              Your portfolio is safe, but likely too conservative for long-term growth.
+              A more balanced mix with equities can improve returns while maintaining reasonable risk.
               </div>
               <div className="simulation-group">
                 <SimulationCard simulation={DEMO_HOLDINGS_SIM} />

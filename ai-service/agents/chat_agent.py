@@ -6,6 +6,7 @@ from langchain.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 
 from tools.market_tools import get_market_news, get_market_price, get_stock_price_history
+from tools.portfolio_tools import get_portfolio_simulation, simulate_holdings
 from tools.retrieval_tools import retrieve_context
 
 _model = init_chat_model("gpt-5.4", model_provider="openai")
@@ -28,6 +29,8 @@ _SYSTEM_PROMPT = (
     "- Use get_market_price for current price questions.\n"
     "- Use get_market_news for market events.\n"
     "- Use get_stock_price_history ONLY for trend analysis.\n"
+    "- Use get_portfolio_simulation ONLY when the user explicitly asks to see a historical simulation or backtest for a specific risk level.\n"
+    "- Use simulate_holdings ONLY when the user explicitly asks to simulate or backtest their current holdings (resolve company names to tickers, e.g. 'Apple' → 'AAPL').\n"
     "- Do NOT call tools unnecessarily.\n\n"
 
     "## Grounding Rules (CRITICAL)\n"
@@ -48,7 +51,8 @@ _SYSTEM_PROMPT = (
 
 _agent = create_agent(
     _model,
-    tools=[retrieve_context, get_market_price, get_market_news, get_stock_price_history],
+    tools=[retrieve_context, get_market_price, get_market_news, get_stock_price_history,
+           get_portfolio_simulation, simulate_holdings],
     system_prompt=_SYSTEM_PROMPT,
 )
 
@@ -60,11 +64,15 @@ def run(messages: list, config: RunnableConfig = None) -> Dict[str, Any]:
 
     context_docs = []
     news_urls = []
+    simulations = []
     for message in response["messages"]:
-        if isinstance(message, ToolMessage) and hasattr(message, "artifact"):
-            if not isinstance(message.artifact, list):
-                continue
-            for item in message.artifact:
+        if not (isinstance(message, ToolMessage) and hasattr(message, "artifact")):
+            continue
+        artifact = message.artifact
+        if isinstance(artifact, dict) and "performance" in artifact:
+            simulations.append(artifact)
+        elif isinstance(artifact, list):
+            for item in artifact:
                 if isinstance(item, str):
                     news_urls.append(item)
                 else:
@@ -76,4 +84,5 @@ def run(messages: list, config: RunnableConfig = None) -> Dict[str, Any]:
         if isinstance(message, ToolMessage)
     ]
 
-    return {"answer": answer, "context": context_docs, "news_urls": news_urls, "tool_outputs": tool_outputs}
+    return {"answer": answer, "context": context_docs, "news_urls": news_urls,
+            "tool_outputs": tool_outputs, "simulations": simulations or None}
