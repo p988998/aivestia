@@ -2,7 +2,10 @@ import json
 import os
 import re
 import uuid
+import warnings
 from contextlib import asynccontextmanager
+
+warnings.filterwarnings("ignore", message="Pydantic serializer warnings", category=UserWarning)
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware

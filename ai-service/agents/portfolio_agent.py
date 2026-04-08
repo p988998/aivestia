@@ -26,7 +26,7 @@ _SYSTEM_PROMPT = (
 
     "## Tool Usage Rules\n"
     "- ALWAYS use get_portfolio_simulation for recommendations.\n"
-    "- Use simulate_holdings FIRST if user provides current portfolio.\n"
+    "- If user_profile contains holdings, you MUST call simulate_holdings FIRST with the correct ticker symbol (resolve company names to tickers, e.g. 'Apple' → 'AAPL').\n"
     "- Use get_market_price and get_market_news for discussed assets.\n"
     "- Use get_stock_price_history for performance claims.\n"
     "- Use retrieve_context for investment principles.\n\n"
@@ -100,19 +100,20 @@ def run(messages: list, user_profile: dict = {}, config: RunnableConfig = None) 
         if isinstance(message, ToolMessage)
     ]
 
-    # Only simulate current holdings when agent produced a recommendation
-    simulations = []
     has_recommendation = any(s.get("label") == "Recommended Portfolio" for s in agent_simulations)
-    if has_recommendation and valid_holdings:
+    has_holdings_sim = any(s.get("label") == "Your Current Portfolio" for s in agent_simulations)
+
+    simulations = []
+    # Fallback: agent skipped simulate_holdings — try directly with raw ticker (may fail for non-ticker names)
+    if has_recommendation and valid_holdings and not has_holdings_sim:
         holdings_csv = ",".join(f"{h['ticker']}:{h['weight']}" for h in valid_holdings)
-        risk_level = user_profile.get("riskLevel", "medium")
         result = simulate_holdings.invoke(
-            {"holdings_csv": holdings_csv, "risk_level": risk_level}
+            {"holdings_csv": holdings_csv, "risk_level": user_profile.get("riskLevel", "medium")}
         )
         holdings_artifact = getattr(result, "artifact", {})
         if isinstance(holdings_artifact, dict) and "performance" in holdings_artifact:
             simulations.append(holdings_artifact)  # current holdings first (left card)
 
-    simulations.extend(agent_simulations)  # recommended portfolio second (right card)
+    simulations.extend(agent_simulations)  # agent's simulations: holdings (if called) + recommendation
 
     return {"answer": answer, "context": context_docs, "tool_outputs": tool_outputs, "simulations": simulations or None}

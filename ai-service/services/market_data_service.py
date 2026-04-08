@@ -1,3 +1,5 @@
+import math
+
 import yfinance as yf
 from pydantic import BaseModel
 
@@ -48,10 +50,14 @@ def get_price_history(ticker: str, period: str = "1mo", interval: str = "1d") ->
         hist = yf.Ticker(ticker.upper()).history(period=period, interval=interval)
         if hist.empty:
             raise ValueError(f"No historical data found for '{ticker.upper()}'.")
-        return [
-            PricePoint(date=ts.strftime("%Y-%m-%d"), close=round(row["Close"], 2))
+        points = [
+            PricePoint(date=ts.strftime("%Y-%m-%d"), close=round(float(row["Close"]), 2))
             for ts, row in hist.iterrows()
+            if not math.isnan(float(row["Close"]))
         ]
+        if not points:
+            raise ValueError(f"No valid historical data found for '{ticker.upper()}'.")
+        return points
     except ValueError:
         raise
     except Exception as e:
