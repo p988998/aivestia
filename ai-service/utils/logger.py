@@ -1,3 +1,10 @@
+from datetime import datetime
+
+
+def _ts():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 # Color codes for better logging
 class Colors:
     PURPLE = "\033[95m"
@@ -7,6 +14,7 @@ class Colors:
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
     RED = "\033[91m"
+    GRAY = "\033[90m"
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
     END = "\033[0m"
@@ -14,26 +22,26 @@ class Colors:
 
 def log_info(message: str, color: str = Colors.CYAN):
     """Log info message with color"""
-    print(f"{color}ℹ️  {message}{Colors.END}")
+    print(f"{Colors.GRAY}[{_ts()}]{Colors.END} {color}ℹ️  {message}{Colors.END}")
 
 
 def log_success(message: str):
     """Log success message in green"""
-    print(f"{Colors.GREEN}✅ {message}{Colors.END}")
+    print(f"{Colors.GRAY}[{_ts()}]{Colors.END} {Colors.GREEN}✅ {message}{Colors.END}")
 
 
 def log_error(message: str):
     """Log error message in red"""
-    print(f"{Colors.RED}❌ {message}{Colors.END}")
+    print(f"{Colors.GRAY}[{_ts()}]{Colors.END} {Colors.RED}❌ {message}{Colors.END}")
 
 
 def log_warning(message: str):
     """Log warning message in yellow"""
-    print(f"{Colors.YELLOW}⚠️  {message}{Colors.END}")
+    print(f"{Colors.GRAY}[{_ts()}]{Colors.END} {Colors.YELLOW}⚠️  {message}{Colors.END}")
 
 
 def log_header(message: str):
     """Log header message with emphasis"""
     print(f"\n{Colors.BOLD}{Colors.PURPLE}{'='*60}{Colors.END}")
-    print(f"{Colors.BOLD}{Colors.PURPLE}🚀 {message}{Colors.END}")
+    print(f"{Colors.GRAY}[{_ts()}]{Colors.END} {Colors.BOLD}{Colors.PURPLE}🚀 {message}{Colors.END}")
     print(f"{Colors.BOLD}{Colors.PURPLE}{'='*60}{Colors.END}\n")

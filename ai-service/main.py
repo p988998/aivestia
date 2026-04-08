@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import uuid
 import warnings
 from contextlib import asynccontextmanager
@@ -235,6 +236,8 @@ Response:
 @app.post("/chat/stream")
 def chat_stream(req: ChatRequest):
     def generate():
+        start = time.time()
+        log_info(f"[/chat/stream] user={req.user_id} chat={req.chat_id} q=\"{req.message}\"")
         final_vals = {}
         try:
             for event_type, data in stream_llm(req.message, req.chat_id, req.user_profile):
@@ -279,6 +282,7 @@ def chat_stream(req: ChatRequest):
             else:
                 conn.execute("UPDATE chats SET updated_at = NOW() WHERE id = %s", (req.chat_id,))
 
+        log_success(f"[/chat/stream] user={req.user_id} chat={req.chat_id} took={time.time()-start:.1f}s")
         yield f"event: done\ndata: {json.dumps({'sources': sources, 'simulations': simulations, 'answer': answer})}\n\n"
 
     return StreamingResponse(
