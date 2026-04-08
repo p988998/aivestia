@@ -32,11 +32,12 @@ export default function AboutPage() {
           <div className="stack-section">
             <div className="stack-label">Tech Stack</div>
             <div className="stack-list">
-              <StackItem lang="Python" detail="FastAPI · LangGraph · LangChain · OpenAI GPT-5.4 / GPT-4o-mini" color="#3b82f6" />
+              <StackItem lang="Python" detail="FastAPI · LangGraph · LangChain · OpenAI GPT-5.4 / GPT-4o-mini" color="#3776AB" />
               <StackItem lang="React" detail="Vite · Recharts · SSE streaming" color="#61dafb" />
               <StackItem lang="PostgreSQL" detail="Chat history · Conversation state persistence" color="#336791" />
               <StackItem lang="Pinecone" detail="Vector store · RAG pipeline · text-embedding-3-small" color="#22c55e" />
-              <StackItem lang="AWS" detail="EC2 (backend) · RDS (PostgreSQL)" color="#f59e0b" />
+              <StackItem lang="AWS" detail="EC2 (backend) · RDS (PostgreSQL)" color="#FF9900" />
+              <StackItem lang="Nginx" detail="Reverse proxy · Rate limiting" color="#009639" />
               <StackItem lang="Vercel" detail="Frontend deployment" color="#ffffff" />
             </div>
           </div>
