@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings", category=UserWarning)
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -121,11 +121,13 @@ def _strip_source_suffix(text: str) -> str:
 # ---------- User endpoints ----------
 
 @app.post("/users", status_code=201)
-def create_user(user_id: str):
+def create_user(user_id: str, request: Request):
+    ip = request.headers.get("x-real-ip", request.client.host)
+    log_info(f"[/users] user={user_id} ip={ip}")
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO users (id) VALUES (%s) ON CONFLICT DO NOTHING",
-            (user_id,),
+            "INSERT INTO users (id, ip) VALUES (%s, %s) ON CONFLICT (id) DO UPDATE SET ip = EXCLUDED.ip",
+            (user_id, ip),
         )
     return {"user_id": user_id}
 

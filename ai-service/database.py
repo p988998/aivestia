@@ -15,6 +15,7 @@ def init_db() -> None:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id         UUID PRIMARY KEY,
+                ip         TEXT,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
