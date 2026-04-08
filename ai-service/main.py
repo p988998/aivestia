@@ -29,7 +29,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173, https://aivestia.vercel.app").split(",")
+_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,https://aivestia.vercel.app").split(",")
 
 app.add_middleware(
     CORSMiddleware,
