@@ -44,7 +44,7 @@ _origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,https://aivestia.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
