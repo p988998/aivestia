@@ -79,7 +79,7 @@ export default function HomePage({ onNavigate }) {
     <>
       <main className="hero">
         <div className="hero-content">
-          <div className="badge">AI-Powered Robo-Advisor</div>
+          <div className="badge">AI Investment Advisor</div>
           <h1>
             Smart investing,<br />
             <span className="highlight">built around you.</span>

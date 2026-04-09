@@ -1,4 +1,6 @@
-# Aivestia — AI-Powered Robo-Advisor
+# Aivestia — AI Investment Advisor
+
+[中文](README.zh.md)
 
 > An educational demo of an AI-driven investment advisor. Not a licensed financial product.
 
