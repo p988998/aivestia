@@ -8,14 +8,16 @@
 
 ## Features
 
-- **Conversational AI Advisor** — Ask anything about ETFs, risk levels, market trends, or portfolio strategies via a streaming chat interface
-- **Personalized Portfolio Recommendations** — Rule-based allocation engine adjusted by user age, risk tolerance, investment horizon, and interests
-- **Dual-Agent Architecture** — LangGraph routes queries to a Chat Agent (market info) or Portfolio Agent (personalized recommendations) based on intent
-- **Hallucination Detection** — A dedicated verification node validates all answers against tool outputs before the final response is generated
-- **Historical Portfolio Simulation** — Compare your current holdings vs. the recommended portfolio with real historical performance data
-- **Real-Time Market Data** — Live stock prices, 52-week highs/lows, and recent news via Yahoo Finance and Finnhub
-- **RAG Investment Knowledge Base** — Pinecone vector store with 60+ pages of investment concepts (ETFs, asset allocation, Modern Portfolio Theory)
-- **Persistent Chat History** — Full conversation history stored in PostgreSQL with LangGraph checkpoint support
+| | |
+|---|---|
+| 🤖 **Conversational AI Advisor** | Ask anything about ETFs, risk levels, market trends, or portfolio strategies via a streaming chat interface |
+| 🎯 **Personalized Portfolio Recommendations** | Rule-based allocation engine adjusted by user age, risk tolerance, investment horizon, and interests |
+| 🔀 **Dual-Agent Architecture** | LangGraph routes queries to a Chat Agent (market info) or Portfolio Agent (personalized recommendations) based on intent |
+| 🛡️ **Hallucination Detection** | A dedicated verification node validates all answers against tool outputs before the final response is generated |
+| 📈 **Historical Portfolio Simulation** | Compare your current holdings vs. the recommended portfolio with real historical performance data |
+| 📡 **Real-Time Market Data** | Live stock prices, 52-week highs/lows, and recent news via Yahoo Finance and Finnhub |
+| 🧠 **RAG Investment Knowledge Base** | Pinecone vector store with 60+ pages of investment concepts (ETFs, asset allocation, Modern Portfolio Theory) |
+| 💬 **Persistent Chat History** | Full conversation history stored in PostgreSQL with LangGraph checkpoint support |
 
 ---
 
