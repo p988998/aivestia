@@ -1105,6 +1105,13 @@
   max-width: 400px;
 }
 
+.form-hint {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
 .form-title {
   font-size: 22px;
   font-weight: 700;

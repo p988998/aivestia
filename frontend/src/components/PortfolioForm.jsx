@@ -70,6 +70,10 @@ export default function PortfolioForm({ onSaveForChat, onClear, savedProfile }) 
     <div className="portfolio-form-wrap">
       <div className="portfolio-form">
         <h2 className="form-title">My Investor Profile</h2>
+        <p className="form-hint">
+          Profile is optional — you can chat without it for general investment questions.
+          Fill it in to get personalized portfolio recommendations tailored to your goals.
+        </p>
         <label className="form-label">
           Age
           <input type="number" min="18" max="100" value={form.age}
