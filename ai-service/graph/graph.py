@@ -51,3 +51,12 @@ def build_graph(checkpointer):
     workflow.add_edge(FINAL_LLM, END)
 
     return workflow.compile(checkpointer=checkpointer)
+
+
+if __name__ == "__main__":
+    from langgraph.checkpoint.memory import MemorySaver
+    app = build_graph(MemorySaver())
+    img = app.get_graph().draw_mermaid_png()
+    with open("graph.png", "wb") as f:
+        f.write(img)
+    print("graph.png saved")
