@@ -25,7 +25,17 @@ from utils.logger import log_info, log_success
 async def lifespan(_: FastAPI):
     init_db()
     from langgraph.checkpoint.postgres import PostgresSaver
-    with PostgresSaver.from_conn_string(DATABASE_URL) as checkpointer:
+    from psycopg.rows import dict_row
+    from psycopg_pool import ConnectionPool
+
+    with ConnectionPool(
+        conninfo=DATABASE_URL,
+        min_size=1,
+        max_size=int(os.getenv("CHECKPOINTER_POOL_MAX_SIZE", "10")),
+        kwargs={"autocommit": True, "row_factory": dict_row},
+        check=ConnectionPool.check_connection,
+    ) as pool:
+        checkpointer = PostgresSaver(pool)
         checkpointer.setup()
         set_langgraph_app(build_graph(checkpointer))
         yield
