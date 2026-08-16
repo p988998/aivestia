@@ -13,9 +13,4 @@ def portfolio_agent_node(state: GraphState, config: RunnableConfig) -> GraphStat
         "news_urls":    [],
         "tool_outputs": result.get("tool_outputs", []),
         "simulations":  result.get("simulations"),
-        "retry_count":  0,
-        "history":      [
-            {"role": "user",      "content": state["question"]},
-            {"role": "assistant", "content": result["answer"]},
-        ],
     }

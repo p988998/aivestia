@@ -12,4 +12,4 @@ def router_node(state: GraphState) -> GraphState:
         question = state["question"]
 
     result = question_router.invoke({"question": question})
-    return {"datasource": result.datasource}
+    return {"datasource": result.datasource, "retry_count": 0}

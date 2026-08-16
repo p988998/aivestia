@@ -28,9 +28,4 @@ def chat_agent_node(state: GraphState, config: RunnableConfig) -> GraphState:
         "news_urls":    result.get("news_urls", []),
         "tool_outputs": result.get("tool_outputs", []),
         "simulations":  result.get("simulations"),
-        "retry_count":  0,
-        "history":      [
-            {"role": "user",      "content": state["question"]},
-            {"role": "assistant", "content": result["answer"]},
-        ],
     }

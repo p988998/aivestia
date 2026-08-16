@@ -48,4 +48,10 @@ def final_llm_node(state: GraphState, config: RunnableConfig) -> GraphState:
         },
         config=config,
     )
-    return {"answer": result.content}
+    return {
+        "answer": result.content,
+        "history": [
+            {"role": "user", "content": state["question"]},
+            {"role": "assistant", "content": result.content},
+        ],
+    }
