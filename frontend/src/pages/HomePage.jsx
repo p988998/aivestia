@@ -91,6 +91,7 @@ export default function HomePage({ onNavigate }) {
           <div className="hero-actions">
             <button className="btn-primary btn-lg" onClick={() => onNavigate('chat')}>Meet Your AI Financial Advisor</button>
           </div>
+          <p className="hero-hint">👆 Click to start chatting — it's free</p>
           <div className="how-steps">
             {STEPS.map((text, i) => (
               <div className="step" key={i}>

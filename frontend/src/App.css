@@ -604,6 +604,12 @@
   gap: 16px;
 }
 
+.hero-hint {
+  color: #64748b;
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
 /* ── Portfolio Card ── */
 .hero-card {
   background: #13131a;
